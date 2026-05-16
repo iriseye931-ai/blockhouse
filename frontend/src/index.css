@@ -41,6 +41,17 @@
   50%       { opacity: 0.80; transform: scale(1.04); }
 }
 
+@keyframes stat-pulse {
+  0%   { opacity: 1; }
+  30%  { opacity: 0.35; }
+  100% { opacity: 1; }
+}
+
+@keyframes link-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.28; }
+}
+
 * {
   box-sizing: border-box;
 }

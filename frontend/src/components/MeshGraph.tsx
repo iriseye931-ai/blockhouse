@@ -9,6 +9,7 @@ const AGENT_COLORS: Record<string, string> = {
   atlas: '#ffe49a',
   hermes: '#8fe7ff',
   iriseye: '#c6b7ff',
+  claude: '#a8ffd4',
 }
 
 const SERVICE_COLORS: Record<string, string> = {
@@ -33,6 +34,7 @@ const AGENT_LABELS: Record<string, string> = {
   atlas: 'Lead',
   hermes: 'Hermes',
   iriseye: 'IrisEye',
+  claude: 'Claude',
 }
 
 const WATCH_AGENTS = ['atlas', 'hermes', 'iriseye', 'claude'] as const
@@ -55,6 +57,7 @@ const AGENT_POINTS: Record<string, Vec3> = {
   atlas: { x: 0, y: 0.16, z: 0.95 },
   hermes: { x: -0.62, y: -0.18, z: 0.48 },
   iriseye: { x: 0.6, y: -0.22, z: 0.44 },
+  claude: { x: 0.22, y: 0.58, z: 0.72 },
 }
 
 const SERVICE_POINTS: Record<string, Vec3> = {
@@ -112,6 +115,8 @@ const POLY_LINES: Array<[Vec3, Vec3]> = [
   [AGENT_POINTS.hermes, AGENT_POINTS.iriseye],
   [AGENT_POINTS.hermes, AGENT_POINTS.atlas],
   [AGENT_POINTS.iriseye, AGENT_POINTS.atlas],
+  [AGENT_POINTS.claude, AGENT_POINTS.atlas],
+  [AGENT_POINTS.claude, SERVICE_POINTS.openviking],
 ]
 
 function hexToRgb(hex: string) {
@@ -1369,6 +1374,12 @@ export default function MeshGraph({
               const hermesSharedSkillProfiles = agentKey === 'hermes'
                 ? hermesNativeProfiles.filter((profile) => profile.skill_overview?.shared_skills_connected).length
                 : null
+              const hermesMemoryProfiles = agentKey === 'hermes'
+                ? hermesNativeProfiles.filter((profile) => profile.memory_overview?.memory_enabled).length
+                : null
+              const hermesExternalMemoryProfiles = agentKey === 'hermes'
+                ? hermesNativeProfiles.filter((profile) => profile.memory_overview?.external_provider_active || profile.memory_overview?.external_provider_available).length
+                : null
 
               return (
                 <div
@@ -1475,6 +1486,14 @@ export default function MeshGraph({
                         <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Skills</span>
                         <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                           {hermesSharedSkillProfiles}/{hermesNativeProfiles.length} shared
+                        </span>
+                      </div>
+                    )}
+                    {agentKey === 'hermes' && hermesMemoryProfiles != null && hermesMemoryProfiles > 0 && (
+                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
+                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Memory</span>
+                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                          {hermesMemoryProfiles}/{hermesNativeProfiles.length} local · {hermesExternalMemoryProfiles ?? 0} ext
                         </span>
                       </div>
                     )}

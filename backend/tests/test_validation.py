@@ -26,6 +26,7 @@ from main import (
     _cleanup_hermes_worktree,
     _finalize_agents,
     _fetch_hermes_checkpoint_overview,
+    _fetch_hermes_memory_overview,
     _fetch_hermes_provider_overview,
     _fetch_hermes_profile_session_overview,
     _fetch_hermes_sessions_overview,
@@ -538,6 +539,55 @@ class TestHermesSessions:
         assert overview["external_skill_count"] == 1
         assert overview["shared_skills_connected"] is True
         assert "mesh/mesh-health" in overview["external_dirs"][0]["sample_skills"]
+
+    def test_memory_overview_reads_built_in_files_and_provider_readiness(self, tmp_path):
+        profile_home = tmp_path / "mesh-sidecar"
+        memories_dir = profile_home / "memories"
+        memories_dir.mkdir(parents=True)
+        (memories_dir / "MEMORY.md").write_text("repo facts\n")
+        (memories_dir / "USER.md").write_text("operator prefs\n")
+        (profile_home / "config.yaml").write_text(
+            "memory:\n"
+            "  memory_enabled: true\n"
+            "  user_profile_enabled: true\n"
+            "  memory_char_limit: 4000\n"
+            "  user_char_limit: 2500\n"
+            "  nudge_interval: 10\n"
+            "  flush_min_turns: 6\n"
+            "mcp_servers:\n"
+            "  openviking-memory:\n"
+            "    url: http://127.0.0.1:2033/mcp\n"
+        )
+
+        overview = _fetch_hermes_memory_overview(profile_home)
+        assert overview["memory_enabled"] is True
+        assert overview["user_profile_enabled"] is True
+        assert overview["memory_file_exists"] is True
+        assert overview["user_file_exists"] is True
+        assert overview["memory_char_count"] > 0
+        assert overview["user_char_count"] > 0
+        assert overview["external_provider_active"] is False
+        assert overview["external_provider_available"] is True
+        assert "openviking-memory" in overview["external_provider_candidates"]
+
+    def test_memory_overview_marks_external_provider_active_when_selected(self, tmp_path):
+        profile_home = tmp_path / "mesh-reasoning"
+        memories_dir = profile_home / "memories"
+        memories_dir.mkdir(parents=True)
+        (profile_home / "config.yaml").write_text(
+            "memory:\n"
+            "  memory_enabled: true\n"
+            "  user_profile_enabled: false\n"
+            "  provider: openviking\n"
+            "mcp_servers:\n"
+            "  openviking-memory:\n"
+            "    url: http://127.0.0.1:2033/mcp\n"
+        )
+
+        overview = _fetch_hermes_memory_overview(profile_home)
+        assert overview["external_provider_name"] == "openviking"
+        assert overview["external_provider_active"] is True
+        assert overview["external_provider_endpoint"] == "http://127.0.0.1:2033/mcp"
 
     def test_background_log_endpoint_returns_tail(self, tmp_path, monkeypatch):
         import main as main_mod

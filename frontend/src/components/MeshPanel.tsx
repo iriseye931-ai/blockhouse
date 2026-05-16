@@ -297,6 +297,10 @@ function HermesTab({
   const smartRoutingProfiles = hermesNativeProfiles.filter((profile) => profile.provider_overview?.smart_routing_enabled).length
   const fallbackProfiles = hermesNativeProfiles.filter((profile) => (profile.provider_overview?.fallback_count ?? 0) > 0).length
   const sharedSkillProfiles = hermesNativeProfiles.filter((profile) => profile.skill_overview?.shared_skills_connected).length
+  const memoryEnabledProfiles = hermesNativeProfiles.filter((profile) => profile.memory_overview?.memory_enabled).length
+  const memoryFileProfiles = hermesNativeProfiles.filter((profile) => profile.memory_overview?.memory_file_exists || profile.memory_overview?.user_file_exists).length
+  const memoryExternalActiveProfiles = hermesNativeProfiles.filter((profile) => profile.memory_overview?.external_provider_active).length
+  const memoryExternalReadyProfiles = hermesNativeProfiles.filter((profile) => profile.memory_overview?.external_provider_available).length
   const focusedAgent = focus?.type === 'agent'
     ? agents.find((agent) => (agent.name ?? '').toLowerCase().replace(/\s+/g, '-') === focus.key)
     : null
@@ -700,6 +704,45 @@ function HermesTab({
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+                {hermesNativeProfiles.length > 0 && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,23,42,0.45)' }}>
+                    <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
+                      memory
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
+                      <MiniStat label="built-in" value={`${memoryEnabledProfiles}/${hermesNativeProfiles.length}`} tone={memoryEnabledProfiles > 0 ? '#10b981' : '#94a3b8'} />
+                      <MiniStat label="files" value={`${memoryFileProfiles}/${hermesNativeProfiles.length}`} tone={memoryFileProfiles > 0 ? '#67e8f9' : '#94a3b8'} />
+                      <MiniStat label="ext" value={`${memoryExternalActiveProfiles > 0 ? memoryExternalActiveProfiles : memoryExternalReadyProfiles}/${hermesNativeProfiles.length}`} tone={(memoryExternalActiveProfiles > 0 || memoryExternalReadyProfiles > 0) ? '#a78bfa' : '#94a3b8'} />
+                    </div>
+                    {activeProfileMeta?.memory_overview && (
+                      <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+                        <div style={{ fontSize: 9, color: '#cbd5e1', fontFamily: 'monospace' }}>
+                          {(activeProfileMeta.display_name ?? activeProfileMeta.hermes_profile ?? activeProfileMeta.name)} · {activeProfileMeta.memory_overview.memory_enabled ? 'built-in memory enabled' : 'built-in memory disabled'}
+                        </div>
+                        <div style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          memory file: {activeProfileMeta.memory_overview.memory_file_exists ? `${activeProfileMeta.memory_overview.memory_char_count} chars` : 'missing'} · user file: {activeProfileMeta.memory_overview.user_file_exists ? `${activeProfileMeta.memory_overview.user_char_count} chars` : 'missing'}
+                        </div>
+                        <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          limits: {activeProfileMeta.memory_overview.memory_char_limit ?? '—'} / {activeProfileMeta.memory_overview.user_char_limit ?? '—'} · flush {activeProfileMeta.memory_overview.flush_min_turns ?? '—'} turns
+                        </div>
+                        <div style={{ fontSize: 8, color: activeProfileMeta.memory_overview.external_provider_active ? '#10b981' : activeProfileMeta.memory_overview.external_provider_available ? '#94a3b8' : '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          external: {activeProfileMeta.memory_overview.external_provider_hint}
+                          {activeProfileMeta.memory_overview.external_provider_endpoint ? ` · ${activeProfileMeta.memory_overview.external_provider_endpoint}` : ''}
+                        </div>
+                        {activeProfileMeta.memory_overview.external_provider_candidates.length > 0 && (
+                          <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            candidates: {activeProfileMeta.memory_overview.external_provider_candidates.join(', ')}
+                          </div>
+                        )}
+                        {activeProfileMeta.session_overview && (
+                          <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            session search: {activeProfileMeta.session_overview.search_ready ? 'ready' : 'not ready'}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 {hermesNativeProfiles.length > 0 && (
@@ -1253,6 +1296,16 @@ function HermesTab({
                             <div style={{ fontSize: 8, color: profile.skill_overview.shared_skills_connected ? '#10b981' : '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               skills: {profile.skill_overview.local_skill_count} local · {profile.skill_overview.external_skill_count} external
                             </div>
+                          )}
+                          {profile.memory_overview && (
+                            <>
+                              <div style={{ fontSize: 8, color: profile.memory_overview.memory_enabled ? '#10b981' : '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                                memory: {profile.memory_overview.memory_enabled ? 'built-in on' : 'built-in off'} · {profile.memory_overview.external_provider_hint}
+                              </div>
+                              <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                                files: M {profile.memory_overview.memory_char_count}c · U {profile.memory_overview.user_char_count}c
+                              </div>
+                            </>
                           )}
                           {profile.base_url && (
                             <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>

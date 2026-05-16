@@ -171,10 +171,10 @@ function TelemetryStamp({ isConnected }: { isConnected: boolean }) {
           UP {uptime}
         </span>
       )}
-      <span style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: isConnected && live ? C.teal : C.dim }}>
-        {isConnected ? 'TELEMETRY LIVE' : 'DEGRADED LINK'}
+      <span style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: isConnected && live ? C.teal : C.dim, animation: !isConnected ? 'link-blink 1.4s ease-in-out infinite' : undefined }}>
+        {isConnected ? 'TELEMETRY LIVE' : 'RECONNECTING…'}
       </span>
-      <span style={{ fontSize: 20, color: C.text, letterSpacing: '0.08em', fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ fontSize: 20, color: C.text, letterSpacing: '0.08em', fontVariantNumeric: 'tabular-nums', fontFamily: '"Fira Code", monospace' }}>
         {time}
       </span>
     </div>
@@ -236,8 +236,8 @@ function StatusLegend() {
 
 function Sparkline({ points }: { points: { up: boolean }[] | undefined }) {
   if (!points || points.length < 2) return null
-  const w = 22
-  const h = 8
+  const w = 40
+  const h = 10
   const step = w / Math.max(points.length - 1, 1)
   const coords = points
     .map((point, index) => `${index * step},${point.up ? 1.5 : h - 1.5}`)
@@ -268,6 +268,17 @@ function StatPill({ label, value, sub, warn }: { label: string; value: string; s
     : numericPct != null && numericPct > 70
       ? C.amber
       : '#7ee8ff'
+  const [pulsing, setPulsing] = useState(false)
+  const prevValue = useRef(value)
+  useEffect(() => {
+    if (prevValue.current !== value && prevValue.current !== '') {
+      setPulsing(true)
+      const t = setTimeout(() => setPulsing(false), 400)
+      prevValue.current = value
+      return () => clearTimeout(t)
+    }
+    prevValue.current = value
+  }, [value])
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
@@ -280,7 +291,7 @@ function StatPill({ label, value, sub, warn }: { label: string; value: string; s
       minWidth: 100,
     }}>
       <span style={{ fontSize: 10, letterSpacing: '0.2em', color: C.soft, textTransform: 'uppercase', marginBottom: 3 }}>{label}</span>
-      <span style={{ fontSize: 24, color: accent, fontWeight: 700, letterSpacing: '0.04em', lineHeight: 1 }}>{value}</span>
+      <span style={{ fontSize: 24, color: accent, fontWeight: 700, letterSpacing: '0.04em', lineHeight: 1, fontFamily: '"Fira Code", monospace', animation: pulsing ? 'stat-pulse 0.4s ease-out' : undefined }}>{value}</span>
       {sub && <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.1em', marginTop: 3 }}>{sub}</span>}
     </div>
   )
@@ -343,15 +354,17 @@ function OpsStrip({ onSelect }: { onSelect: (selection: GraphSelection) => void 
         type="button"
         onClick={() => onSelect({ type: 'service', key: 'memory_mcp', label: 'Memory' })}
         style={{ fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+        title="View memory service details"
       >
-        Memory {routingSummary?.memory_mode ?? memorySummary?.primary_cause?.kind ?? 'healthy'}
+        MEM · {routingSummary?.memory_mode ?? memorySummary?.primary_cause?.kind ?? 'healthy'}
       </button>
       <button
         type="button"
         onClick={() => onSelect({ type: 'agent', key: (routingSummary?.guidance?.memory_heavy ?? 'hermes').toLowerCase(), label: routingSummary?.guidance?.memory_heavy ?? 'Hermes' })}
         style={{ fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+        title="View active routing agent"
       >
-        Route {routingSummary?.guidance?.memory_heavy ?? '—'}{routingSummary?.guidance?.memory_heavy?.toLowerCase() === 'hermes' && routingSummary?.profile_guidance?.memory_heavy ? ` · ${routingSummary.profile_guidance.memory_heavy}` : ''}
+        VIA → {routingSummary?.guidance?.memory_heavy ?? '—'}{routingSummary?.guidance?.memory_heavy?.toLowerCase() === 'hermes' && routingSummary?.profile_guidance?.memory_heavy ? ` · ${routingSummary.profile_guidance.memory_heavy}` : ''}
       </button>
     </div>
   )
@@ -400,6 +413,11 @@ function AlertsLine() {
       <span style={{ fontSize: 11, color: C.soft, letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {primary.text}
       </span>
+      {alerts.length > 1 && (
+        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.14em', textTransform: 'uppercase', flexShrink: 0 }}>
+          +{alerts.length - 1} more
+        </span>
+      )}
     </div>
   )
 }
@@ -459,8 +477,14 @@ function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) =
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
             padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
           }}
         >
+          {!expanded && (denyCount > 0 || memoryAlerts > 0) && (
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: denyCount > 0 ? C.red : C.amber, boxShadow: `0 0 6px ${denyCount > 0 ? C.red : C.amber}` }} />
+          )}
           {expanded ? 'collapse' : 'expand'}
         </button>
       </div>

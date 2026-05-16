@@ -568,6 +568,7 @@ def _enrich_local_profile(agent_name: str, profile: dict[str, Any]) -> dict[str,
         enriched["provider_overview"] = _fetch_hermes_provider_overview(profile_home)
         enriched["toolset_overview"] = _fetch_hermes_toolset_overview(profile_home)
         enriched["skill_overview"] = _fetch_hermes_skill_overview(profile_home)
+        enriched["memory_overview"] = _fetch_hermes_memory_overview(profile_home)
         return enriched
     model_path = _resolve_profile_model(profile)
     pid_path = _profile_pid_path(agent_name, str(profile.get("name", "")))
@@ -836,6 +837,94 @@ def _fetch_hermes_skill_overview(profile_home: Path) -> dict[str, Any]:
         "external_dir_count": len(external_info),
         "external_skill_count": external_total,
         "shared_skills_connected": any(item.get("exists") and item.get("skill_count", 0) > 0 for item in external_info),
+    }
+
+
+def _read_text_char_count(path: Path) -> int:
+    try:
+        return len(path.read_text(errors="replace"))
+    except Exception:
+        return 0
+
+
+def _resolve_hermes_memory_provider(config: dict[str, Any], memory_cfg: dict[str, Any]) -> tuple[str | None, dict[str, Any] | None, list[str]]:
+    mcp_servers = config.get("mcp_servers")
+    mcp_servers = mcp_servers if isinstance(mcp_servers, dict) else {}
+    available_names = [str(name).strip() for name in mcp_servers.keys() if isinstance(name, str) and "memory" in str(name).lower()]
+    available_names = [name for name in available_names if name]
+
+    configured_name = str(memory_cfg.get("provider") or "").strip() or None
+    if not configured_name:
+        return None, None, sorted(dict.fromkeys(available_names))
+
+    candidates = [
+        configured_name,
+        f"{configured_name}-memory",
+        configured_name.replace("_", "-"),
+        f"{configured_name.replace('_', '-')}-memory",
+    ]
+    for candidate in candidates:
+        spec = mcp_servers.get(candidate)
+        if isinstance(spec, dict):
+            return configured_name, spec, sorted(dict.fromkeys(available_names))
+    return configured_name, None, sorted(dict.fromkeys(available_names))
+
+
+def _fetch_hermes_memory_overview(profile_home: Path) -> dict[str, Any]:
+    config = _read_hermes_profile_config(profile_home)
+    memory_cfg = config.get("memory")
+    memory_cfg = memory_cfg if isinstance(memory_cfg, dict) else {}
+
+    memories_dir = profile_home / "memories"
+    memory_path = memories_dir / "MEMORY.md"
+    user_path = memories_dir / "USER.md"
+
+    configured_provider, provider_spec, available_providers = _resolve_hermes_memory_provider(config, memory_cfg)
+    provider_url = str(provider_spec.get("url") or provider_spec.get("base_url") or "").strip() if isinstance(provider_spec, dict) else ""
+    latest_update_candidates: list[float] = []
+    for path in (memory_path, user_path):
+        try:
+            if path.exists():
+                latest_update_candidates.append(path.stat().st_mtime)
+        except Exception:
+            continue
+
+    def _int_value(key: str) -> int | None:
+        raw = memory_cfg.get(key)
+        if raw is None:
+            return None
+        try:
+            return int(raw)
+        except Exception:
+            return None
+
+    external_hint = "built-in only"
+    if configured_provider and provider_spec:
+        external_hint = f"{configured_provider} active"
+    elif configured_provider:
+        external_hint = f"{configured_provider} configured"
+    elif available_providers:
+        external_hint = f"{available_providers[0]} ready"
+
+    return {
+        "memory_enabled": bool(memory_cfg.get("memory_enabled")),
+        "user_profile_enabled": bool(memory_cfg.get("user_profile_enabled")),
+        "memory_char_limit": _int_value("memory_char_limit"),
+        "user_char_limit": _int_value("user_char_limit"),
+        "nudge_interval": _int_value("nudge_interval"),
+        "flush_min_turns": _int_value("flush_min_turns"),
+        "memory_dir": str(memories_dir),
+        "memory_file_exists": memory_path.exists(),
+        "user_file_exists": user_path.exists(),
+        "memory_char_count": _read_text_char_count(memory_path) if memory_path.exists() else 0,
+        "user_char_count": _read_text_char_count(user_path) if user_path.exists() else 0,
+        "latest_update_at": _iso_from_timestamp(max(latest_update_candidates)) if latest_update_candidates else None,
+        "external_provider_name": configured_provider,
+        "external_provider_active": bool(configured_provider and provider_spec),
+        "external_provider_available": bool(provider_spec or available_providers),
+        "external_provider_endpoint": provider_url or None,
+        "external_provider_candidates": available_providers,
+        "external_provider_hint": external_hint,
     }
 
 
@@ -3786,7 +3875,7 @@ async def api_local_profiles_action(req: LocalProfileActionRequest):
             [
                 str(MLX_SERVER_BIN),
                 "--model", str(model_path),
-                "--host", "0.0.0.0",
+                "--host", "127.0.0.1",
                 "--port", str(port),
                 "--prompt-cache-bytes", str(536870912),
                 "--max-tokens", str(1024),
@@ -4180,4 +4269,4 @@ async def websocket_endpoint(ws: WebSocket):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=False)

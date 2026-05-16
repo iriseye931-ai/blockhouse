@@ -129,6 +129,26 @@ export interface Agent {
       external_skill_count: number
       shared_skills_connected: boolean
     }
+    memory_overview?: {
+      memory_enabled: boolean
+      user_profile_enabled: boolean
+      memory_char_limit?: number | null
+      user_char_limit?: number | null
+      nudge_interval?: number | null
+      flush_min_turns?: number | null
+      memory_dir: string
+      memory_file_exists: boolean
+      user_file_exists: boolean
+      memory_char_count: number
+      user_char_count: number
+      latest_update_at?: string | null
+      external_provider_name?: string | null
+      external_provider_active: boolean
+      external_provider_available: boolean
+      external_provider_endpoint?: string | null
+      external_provider_candidates: string[]
+      external_provider_hint: string
+    }
     session_overview?: {
       profile: string
       session_count: number
