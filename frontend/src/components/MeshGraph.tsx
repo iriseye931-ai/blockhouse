@@ -13,12 +13,12 @@ const AGENT_COLORS: Record<string, string> = {
 }
 
 const SERVICE_COLORS: Record<string, string> = {
-  openviking: '#dcf6ff',
-  mlx_server: '#f4fdff',
-  memory_mcp: '#d5f3ff',
-  openclaw_mcp: '#bfefff',
-  ollama: '#ccefff',
-  aimaestro: '#e4fbff',
+  openviking: '#eedeff',
+  mlx_server: '#f0eaff',
+  memory_mcp: '#e5d8ff',
+  openclaw_mcp: '#d8c8ff',
+  ollama: '#dcd0ff',
+  aimaestro: '#ede0ff',
 }
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -356,17 +356,17 @@ export default function MeshGraph({
       nodesRef.current = []
 
       const bg = ctx.createRadialGradient(cx, cy, radius * 0.1, cx, cy, Math.max(W, H) * 0.75)
-      bg.addColorStop(0, 'rgba(16,32,48,0.86)')
-      bg.addColorStop(0.22, 'rgba(8,18,28,0.94)')
-      bg.addColorStop(0.5, 'rgba(3,8,14,0.99)')
-      bg.addColorStop(1, 'rgba(2,4,10,1)')
+      bg.addColorStop(0, 'rgba(18,8,36,0.86)')
+      bg.addColorStop(0.22, 'rgba(10,5,22,0.94)')
+      bg.addColorStop(0.5, 'rgba(5,3,12,0.99)')
+      bg.addColorStop(1, 'rgba(4,2,10,1)')
       ctx.fillStyle = bg
       ctx.fillRect(0, 0, W, H)
 
       const smoke = ctx.createRadialGradient(cx, cy, liveRadius * 0.4, cx, cy, Math.max(W, H) * 0.82)
-      smoke.addColorStop(0, 'rgba(220,248,255,0.03)')
-      smoke.addColorStop(0.35, 'rgba(130,220,255,0.05)')
-      smoke.addColorStop(0.7, 'rgba(120,180,255,0.024)')
+      smoke.addColorStop(0, 'rgba(200,170,255,0.03)')
+      smoke.addColorStop(0.35, 'rgba(150,100,255,0.05)')
+      smoke.addColorStop(0.7, 'rgba(140,90,255,0.024)')
       smoke.addColorStop(1, 'rgba(0,0,0,0)')
       ctx.fillStyle = smoke
       ctx.fillRect(0, 0, W, H)
@@ -374,7 +374,7 @@ export default function MeshGraph({
       for (let i = 0; i < 42; i++) {
         const x = (i * 97 + t * (i % 4 === 0 ? 3 : 1.2)) % W
         const y = (i * 57 + t * 5) % H
-        ctx.fillStyle = i % 6 === 0 ? 'rgba(230,250,255,0.2)' : 'rgba(120,210,255,0.18)'
+        ctx.fillStyle = i % 6 === 0 ? 'rgba(220,200,255,0.2)' : 'rgba(160,110,255,0.18)'
         ctx.fillRect(x, y, 1.4, 1.4)
       }
 
@@ -385,13 +385,13 @@ export default function MeshGraph({
       panels.forEach(([x, y, w, h, panel], index) => {
         const cut = compactLayout ? 10 : 14
         const panelGlow = ctx.createLinearGradient(x, y, x + w, y + h)
-        panelGlow.addColorStop(0, 'rgba(8,20,32,0.9)')
-        panelGlow.addColorStop(1, 'rgba(3,8,16,0.86)')
+        panelGlow.addColorStop(0, 'rgba(10,5,20,0.9)')
+        panelGlow.addColorStop(1, 'rgba(6,3,14,0.86)')
         panelPath(ctx, x, y, w, h, cut)
         ctx.fillStyle = panelGlow
         ctx.fill()
         panelPath(ctx, x, y, w, h, cut)
-        ctx.strokeStyle = 'rgba(100,214,255,0.26)'
+        ctx.strokeStyle = 'rgba(160,100,255,0.26)'
         ctx.lineWidth = 1
         ctx.stroke()
         // inner depth layer — thin highlight for glass-like depth
@@ -399,7 +399,7 @@ export default function MeshGraph({
         ctx.strokeStyle = 'rgba(255,255,255,0.03)'
         ctx.lineWidth = 0.4
         ctx.stroke()
-        ctx.strokeStyle = 'rgba(100,214,255,0.64)'
+        ctx.strokeStyle = 'rgba(160,100,255,0.64)'
         ctx.lineWidth = 1.2
         ctx.beginPath()
         ctx.moveTo(x + 2, y + cut + 2)
@@ -414,7 +414,7 @@ export default function MeshGraph({
         ctx.lineTo(x + w - 2, y + h - 10)
         ctx.lineTo(x + w - 2, y + h - 2)
         ctx.stroke()
-        ctx.fillStyle = 'rgba(140,230,255,0.05)'
+        ctx.fillStyle = 'rgba(170,120,255,0.05)'
         ctx.fillRect(x + 10, y + 10, w - 20, 1)
         if (panel) {
           if (panel.kind === 'agents') {
@@ -423,7 +423,7 @@ export default function MeshGraph({
               const rowY = y + 36 + rowIndex * 26
               // subtle row tint on hover (alternating)
               if (rowIndex % 2 === 0) {
-                ctx.fillStyle = 'rgba(100,200,255,0.014)'
+                ctx.fillStyle = 'rgba(160,100,255,0.014)'
                 ctx.fillRect(x + 8, rowY - 11, w - 16, 19)
               }
               // status dot with glow for live agents
@@ -434,7 +434,7 @@ export default function MeshGraph({
               ctx.fill()
               ctx.shadowBlur = 0
               // agent name
-              ctx.fillStyle = 'rgba(196,238,248,0.94)'
+              ctx.fillStyle = 'rgba(210,190,255,0.94)'
               ctx.font = '600 9px sans-serif'
               ctx.textAlign = 'left'
               ctx.fillText(agent.label, x + 26, rowY)
@@ -1291,11 +1291,11 @@ export default function MeshGraph({
           left: isCompact ? 10 : 20,
           top: isCompact ? 10 : 132,
           width: isCompact ? 'min(280px, calc(100% - 20px))' : 292,
-          background: 'linear-gradient(160deg, rgba(6,16,28,0.92), rgba(3,8,16,0.88))',
-          border: '1px solid rgba(100,214,255,0.24)',
+          background: 'linear-gradient(160deg, rgba(8,4,18,0.92), rgba(4,2,12,0.88))',
+          border: '1px solid rgba(160,100,255,0.24)',
           backdropFilter: 'blur(18px)',
           WebkitBackdropFilter: 'blur(18px)',
-          boxShadow: '0 0 32px rgba(100,200,255,0.08), inset 0 0 20px rgba(100,200,255,0.03)',
+          boxShadow: '0 0 32px rgba(160,100,255,0.08), inset 0 0 20px rgba(160,100,255,0.03)',
           overflow: 'hidden',
           boxSizing: 'border-box',
         }}
@@ -1310,19 +1310,19 @@ export default function MeshGraph({
         ))}
         <div style={{ padding: '12px 14px 14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 10, color: 'rgba(150,220,255,0.6)', letterSpacing: '0.22em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 10, color: 'rgba(180,140,255,0.6)', letterSpacing: '0.22em', textTransform: 'uppercase' }}>
               Agent Mesh
             </span>
             {pinnedNode ? (
               <button
                 type="button"
                 onClick={() => { setPinnedNode(null); onSelectionChange?.(null) }}
-                style={{ border: 'none', background: 'transparent', color: 'rgba(100,150,180,0.6)', fontSize: 10, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.14em', padding: 0 }}
+                style={{ border: 'none', background: 'transparent', color: 'rgba(140,100,200,0.6)', fontSize: 10, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.14em', padding: 0 }}
               >
                 ✕ clear
               </button>
             ) : (
-              <span style={{ fontSize: 10, color: 'rgba(100,150,180,0.4)', letterSpacing: '0.12em' }}>live</span>
+              <span style={{ fontSize: 10, color: 'rgba(140,100,200,0.4)', letterSpacing: '0.12em' }}>live</span>
             )}
           </div>
 
@@ -1388,7 +1388,7 @@ export default function MeshGraph({
                     width: '100%',
                     boxSizing: 'border-box',
                     padding: '13px 14px',
-                    border: isFocused ? `2px solid rgba(${accentRgb},0.52)` : '1px solid rgba(100,210,255,0.1)',
+                    border: isFocused ? `2px solid rgba(${accentRgb},0.52)` : '1px solid rgba(160,100,255,0.1)',
                     background: isFocused ? `linear-gradient(180deg, rgba(${accentRgb},0.12), rgba(255,255,255,0.035))` : 'rgba(255,255,255,0.018)',
                     boxShadow: isFocused ? `0 0 30px rgba(${accentRgb},0.18), inset 0 0 0 1px rgba(${accentRgb},0.08)` : 'none',
                     opacity: isFocused ? 1 : 0.9,

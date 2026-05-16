@@ -15,28 +15,28 @@ const TAB_LABELS: { id: Tab; label: string }[] = [
 ]
 
 const C = {
-  panel: '#0f1929',
-  panel2: '#15233a',
-  panel3: '#0b1220',
-  border: '#24374d',
-  borderHi: '#4c6c8f',
-  text: '#eaf4ff',
-  textSoft: '#9db1c7',
-  textDim: '#647992',
-  cyan: '#74d8ff',
-  teal: '#49c7cf',
+  panel: '#0d0919',
+  panel2: '#160e2a',
+  panel3: '#0d0619',
+  border: '#2a1a45',
+  borderHi: '#5a3585',
+  text: '#f4eeff',
+  textSoft: '#9b85c8',
+  textDim: '#6a4d8c',
+  cyan: '#b580ff',
+  teal: '#8f5fcf',
   amber: '#f3b55e',
   green: '#8fe6b8',
   red: '#ff6f6a',
-  violet: '#b399ff',
+  violet: '#b580ff',
 }
 
 function panelSurface(emphasis: 'base' | 'raised' = 'base') {
   return {
     border: `1px solid ${emphasis === 'raised' ? C.borderHi : C.border}`,
     background: emphasis === 'raised'
-      ? 'linear-gradient(180deg, rgba(24,40,65,0.96), rgba(11,18,31,0.98))'
-      : 'linear-gradient(180deg, rgba(17,29,49,0.94), rgba(9,15,26,0.98))',
+      ? 'linear-gradient(180deg, rgba(24,10,45,0.96), rgba(11,5,22,0.98))'
+      : 'linear-gradient(180deg, rgba(17,8,32,0.94), rgba(9,4,18,0.98))',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 14px 28px rgba(0,0,0,0.18)',
   } as const
 }
@@ -50,7 +50,7 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
         padding: '12px 14px 10px',
         gap: 6,
         flexWrap: 'wrap',
-        background: 'linear-gradient(180deg, rgba(20,34,56,0.92), rgba(10,17,29,0.9))',
+        background: 'linear-gradient(180deg, rgba(20,10,38,0.92), rgba(10,5,22,0.9))',
       }}
     >
       {TAB_LABELS.map(({ id, label }) => (
@@ -65,7 +65,7 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
             fontFamily: 'inherit',
             borderRadius: 999,
             border: `1px solid ${active === id ? (id === 'rag' ? '#7f6ab0' : C.borderHi) : C.border}`,
-            background: active === id ? (id === 'rag' ? 'linear-gradient(180deg, rgba(65,41,101,0.96), rgba(26,17,47,0.98))' : 'linear-gradient(180deg, rgba(34,62,97,0.96), rgba(15,29,49,0.98))') : 'rgba(11,18,32,0.92)',
+            background: active === id ? (id === 'rag' ? 'linear-gradient(180deg, rgba(65,41,101,0.96), rgba(26,17,47,0.98))' : 'linear-gradient(180deg, rgba(40,15,70,0.96), rgba(15,8,30,0.98))') : 'rgba(11,6,22,0.92)',
             color: active === id ? (id === 'rag' ? C.violet : C.cyan) : C.textSoft,
             cursor: 'pointer',
             boxShadow: active === id ? '0 12px 22px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)' : 'none',
@@ -100,7 +100,7 @@ function PanelCard({ children, compact = false }: { children: ReactNode; compact
   )
 }
 
-function MiniStat({ label, value, tone = '#94a3b8' }: { label: string; value: string | number; tone?: string }) {
+function MiniStat({ label, value, tone = '#9485a8' }: { label: string; value: string | number; tone?: string }) {
   return (
     <div
       style={{
@@ -132,7 +132,7 @@ function ViewTabs({ active, onChange }: { active: HermesView; onChange: (value: 
             padding: '5px 9px',
             borderRadius: 999,
             border: `1px solid ${active === view ? C.borderHi : C.border}`,
-            background: active === view ? 'linear-gradient(180deg, rgba(34,62,97,0.96), rgba(15,29,49,0.98))' : 'rgba(11,18,32,0.92)',
+            background: active === view ? 'linear-gradient(180deg, rgba(40,15,70,0.96), rgba(15,8,30,0.98))' : 'rgba(11,6,22,0.92)',
             color: active === view ? C.cyan : C.textSoft,
             cursor: 'pointer',
             fontSize: 8,
@@ -165,7 +165,7 @@ function LogsTab() {
   }, [combined.length])
 
   if (combined.length === 0) {
-    return <p style={{ fontSize: 10, color: '#334155', padding: 12 }}>No log entries yet.</p>
+    return <p style={{ fontSize: 10, color: '#2e1e50', padding: 12 }}>No log entries yet.</p>
   }
 
   return (
@@ -173,11 +173,11 @@ function LogsTab() {
       {combined.map(({ src, line }, i) => {
         const isWarn = line.includes('WARNING') || line.includes('WARN')
         const isErr = line.includes('ERROR') || line.includes('restart') || line.includes('OOM')
-        const color = isErr ? '#ef4444' : isWarn ? '#f59e0b' : src === 'mlx' ? '#64748b' : '#475569'
-        const badge = src === 'mlx' ? '#1e293b' : '#0f172a'
+        const color = isErr ? '#ef4444' : isWarn ? '#f59e0b' : src === 'mlx' ? '#5e4a78' : '#42326a'
+        const badge = src === 'mlx' ? '#1e1035' : '#0f0821'
         return (
-          <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', padding: '4px 0', borderBottom: '1px solid rgba(15,23,42,0.45)' }}>
-            <span style={{ fontSize: 8, color: '#475569', background: badge, padding: '2px 5px', borderRadius: 999, flexShrink: 0, marginTop: 1 }}>
+          <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', padding: '4px 0', borderBottom: '1px solid rgba(15,8,30,0.45)' }}>
+            <span style={{ fontSize: 8, color: '#42326a', background: badge, padding: '2px 5px', borderRadius: 999, flexShrink: 0, marginTop: 1 }}>
               {src}
             </span>
             <span style={{ fontSize: 9, color, fontFamily: 'monospace', lineHeight: 1.5, wordBreak: 'break-all' }}>
@@ -491,14 +491,14 @@ function HermesTab({
             <PanelCard>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+                  <div style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
                     graph focus
                   </div>
-                  <div style={{ marginTop: 5, fontSize: 11, color: '#e2e8f0', fontFamily: 'monospace' }}>
+                  <div style={{ marginTop: 5, fontSize: 11, color: '#ece0ff', fontFamily: 'monospace' }}>
                     {focus.label}
                   </div>
                 </div>
-                <div style={{ fontSize: 8, color: '#67e8f9', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                <div style={{ fontSize: 8, color: '#b580ff', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   {focus.type}
                 </div>
               </div>
@@ -509,7 +509,7 @@ function HermesTab({
                 </div>
               )}
               {focusedService?.models && focusedService.models.length > 0 && (
-                <div style={{ marginTop: 8, fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                <div style={{ marginTop: 8, fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                   models: {focusedService.models.join(', ')}
                 </div>
               )}
@@ -519,7 +519,7 @@ function HermesTab({
                 </div>
               )}
               {focusedAgent && (
-                <div style={{ marginTop: 8, fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                <div style={{ marginTop: 8, fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                   focused agent details are expanded in the agents view
                 </div>
               )}
@@ -528,9 +528,9 @@ function HermesTab({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
             <MiniStat label="premium" value={`${routingSummary?.premium_available_count ?? 0}/${routingSummary?.premium_total_count ?? 0}`} tone="#f59e0b" />
-            <MiniStat label="audit" value={permissionAuditSummary?.count ?? 0} tone="#06b6d4" />
+            <MiniStat label="audit" value={permissionAuditSummary?.count ?? 0} tone="#8a50e0" />
             <MiniStat label="next cron" value={nextJob ? fmtIn(nextJob.next_run_in_seconds) : '—'} tone="#a78bfa" />
-            <MiniStat label="hermes" value={showSession ? status?.status ?? 'live' : 'idle'} tone={showSession ? '#10b981' : '#94a3b8'} />
+            <MiniStat label="hermes" value={showSession ? status?.status ?? 'live' : 'idle'} tone={showSession ? '#10b981' : '#9485a8'} />
           </div>
 
           {(premiumPool.length > 0 || localDefault) && (
@@ -539,29 +539,29 @@ function HermesTab({
               <div style={{ display: 'grid', gap: 8 }}>
                 {premiumPool.length > 0 && (
                   <PanelCard compact>
-                    <div style={{ fontSize: 9, color: '#e2e8f0', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: 9, color: '#ece0ff', fontFamily: 'monospace' }}>
                       premium pool: {premiumPool.map((agent) => agent.label ?? agent.name).join(' + ')}
                     </div>
                     {routingSummary && (
-                      <div style={{ marginTop: 4, fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                      <div style={{ marginTop: 4, fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                         available now: {routingSummary.premium_available_count}/{routingSummary.premium_total_count} ({routingSummary.premium_available.join(', ') || 'none'})
                       </div>
                     )}
-                    <div style={{ marginTop: 4, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                    <div style={{ marginTop: 4, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                       reserve for planning, tricky refactors, ambiguous debugging, and final review
                     </div>
                   </PanelCard>
                 )}
                 {localDefault && (
                   <PanelCard compact>
-                    <div style={{ fontSize: 9, color: '#e2e8f0', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: 9, color: '#ece0ff', fontFamily: 'monospace' }}>
                       local default: {localDefault.label ?? localDefault.name}
                     </div>
-                    <div style={{ marginTop: 4, fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                    <div style={{ marginTop: 4, fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                       use for cron, summaries, memory consolidation, repo scans, and routine execution
                     </div>
                     {routingSummary?.guidance && (
-                      <div style={{ marginTop: 3, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                      <div style={{ marginTop: 3, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                         router: routine → {routingSummary.guidance.routine}, specialized → {routingSummary.guidance.specialized}, premium → {routingSummary.guidance.premium}
                       </div>
                     )}
@@ -573,16 +573,16 @@ function HermesTab({
 
           <div>
             <SectionTitle>Task Router</SectionTitle>
-            <form onSubmit={submitTask} style={{ padding: '10px 11px', border: '1px solid #182033', borderRadius: 10, background: 'linear-gradient(180deg, rgba(13,16,32,0.92), rgba(10,12,22,0.92))', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <form onSubmit={submitTask} style={{ padding: '10px 11px', border: '1px solid #1a1030', borderRadius: 10, background: 'linear-gradient(180deg, rgba(13,7,24,0.92), rgba(10,5,20,0.92))', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <textarea
                 value={taskText}
                 onChange={(e) => setTaskText(e.target.value)}
                 rows={3}
                 placeholder="Describe the task to see where the mesh will route it..."
                 style={{
-                  background: '#090b13',
-                  border: '1px solid #182033',
-                  color: '#e2e8f0',
+                  background: '#0a0614',
+                  border: '1px solid #1a1030',
+                  color: '#ece0ff',
                   borderRadius: 8,
                   padding: '9px 10px',
                   fontSize: 10,
@@ -599,8 +599,8 @@ function HermesTab({
                     padding: '6px 10px',
                     borderRadius: 8,
                     border: 'none',
-                    background: submittingTask ? '#06b6d466' : '#06b6d4',
-                    color: '#0a0a0f',
+                    background: submittingTask ? '#8a50e066' : '#8a50e0',
+                    color: '#0a0614',
                     cursor: submittingTask ? 'not-allowed' : 'pointer',
                     fontFamily: 'monospace',
                     opacity: taskText.trim() ? 1 : 0.4,
@@ -608,7 +608,7 @@ function HermesTab({
                 >
                   {submittingTask ? 'Routing…' : 'Route Task'}
                 </button>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
                   <input
                     type="checkbox"
                     checked={dispatchTask}
@@ -617,7 +617,7 @@ function HermesTab({
                   dispatch
                 </label>
                 {taskResult && (
-                  <span style={{ fontSize: 8, color: '#94a3b8', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: 8, color: '#9485a8', fontFamily: 'monospace' }}>
                     {taskResult}
                   </span>
                 )}
@@ -630,21 +630,21 @@ function HermesTab({
               <SectionTitle>Cron</SectionTitle>
               <PanelCard compact>
                 {nextJob && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 0 6px', borderBottom: '1px solid #0f172a' }}>
-                    <span style={{ fontSize: 9, color: '#94a3b8', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 0 6px', borderBottom: '1px solid #0f0821' }}>
+                    <span style={{ fontSize: 9, color: '#9485a8', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
                       {nextJob.name}
                     </span>
-                    <span style={{ fontSize: 9, color: '#06b6d4', fontFamily: 'monospace', flexShrink: 0 }}>
+                    <span style={{ fontSize: 9, color: '#8a50e0', fontFamily: 'monospace', flexShrink: 0 }}>
                       in {fmtIn(nextJob.next_run_in_seconds)}
                     </span>
                   </div>
                 )}
                 {cronJobs.slice(0, 4).map((job) => (
-                  <div key={job.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(15,23,42,0.45)' }}>
-                    <span style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
+                  <div key={job.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(15,8,30,0.45)' }}>
+                    <span style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
                       {job.name}
                     </span>
-                    <span style={{ fontSize: 8, color: job.last_status === 'success' ? '#10b981' : job.last_status ? '#f59e0b' : '#334155', fontFamily: 'monospace', flexShrink: 0 }}>
+                    <span style={{ fontSize: 8, color: job.last_status === 'success' ? '#10b981' : job.last_status ? '#f59e0b' : '#2e1e50', fontFamily: 'monospace', flexShrink: 0 }}>
                       {job.last_status ?? '—'}
                     </span>
                   </div>
@@ -658,18 +658,18 @@ function HermesTab({
             {(showSession || sessionProfiles.length > 0) ? (
               <PanelCard compact>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
-                  <MiniStat label="sessions" value={status?.session_count ?? 0} tone="#67e8f9" />
+                  <MiniStat label="sessions" value={status?.session_count ?? 0} tone="#b580ff" />
                   <MiniStat label="profiles" value={`${status?.sessions?.active_profiles ?? 0}/${status?.sessions?.profile_count ?? 0}`} tone="#a78bfa" />
-                  <MiniStat label="search" value={status?.search_ready ? 'ready' : 'idle'} tone={status?.search_ready ? '#10b981' : '#94a3b8'} />
+                  <MiniStat label="search" value={status?.search_ready ? 'ready' : 'idle'} tone={status?.search_ready ? '#10b981' : '#9485a8'} />
                 </div>
                 {showSession && (
                   <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
                   {fields.filter(([, v]) => v != null && v !== '').map(([label, value]) => (
                     <div key={label}>
-                      <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', textTransform: 'uppercase' }}>
                         {label}
                       </div>
-                      <div style={{ marginTop: 3, fontSize: 9, color: '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-word', lineHeight: 1.4 }}>
+                      <div style={{ marginTop: 3, fontSize: 9, color: '#9485a8', fontFamily: 'monospace', wordBreak: 'break-word', lineHeight: 1.4 }}>
                         {String(value)}
                       </div>
                     </div>
@@ -678,28 +678,28 @@ function HermesTab({
                 )}
                 {sessionProfiles.length > 0 && (
                   <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-                    <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                    <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
                       profile sessions
                     </div>
                     {sessionProfiles.map((profile) => (
-                      <div key={profile.profile} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.7fr 1fr', gap: 8, alignItems: 'start', padding: '7px 0', borderTop: '1px solid rgba(15,23,42,0.45)' }}>
+                      <div key={profile.profile} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.7fr 1fr', gap: 8, alignItems: 'start', padding: '7px 0', borderTop: '1px solid rgba(15,8,30,0.45)' }}>
                         <div>
-                          <div style={{ fontSize: 9, color: '#cbd5e1', fontFamily: 'monospace' }}>{profile.profile}</div>
-                          <div style={{ marginTop: 3, fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 9, color: '#d8d0f0', fontFamily: 'monospace' }}>{profile.profile}</div>
+                          <div style={{ marginTop: 3, fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             {profile.latest_title ?? profile.resume_target ?? 'no sessions yet'}
                           </div>
                           {profile.resume_command && (
-                            <div style={{ marginTop: 3, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ marginTop: 3, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               {profile.resume_command}
                             </div>
                           )}
                         </div>
-                        <div style={{ fontSize: 8, color: '#94a3b8', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 8, color: '#9485a8', fontFamily: 'monospace', lineHeight: 1.5 }}>
                           {profile.session_count} sess
                           <br />
                           {profile.search_ready ? 'fts ready' : 'no fts'}
                         </div>
-                        <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                           {profile.latest_updated_at ? new Date(profile.latest_updated_at).toLocaleString() : 'idle'}
                         </div>
                       </div>
@@ -707,37 +707,37 @@ function HermesTab({
                   </div>
                 )}
                 {hermesNativeProfiles.length > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,23,42,0.45)' }}>
-                    <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,8,30,0.45)' }}>
+                    <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
                       memory
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
-                      <MiniStat label="built-in" value={`${memoryEnabledProfiles}/${hermesNativeProfiles.length}`} tone={memoryEnabledProfiles > 0 ? '#10b981' : '#94a3b8'} />
-                      <MiniStat label="files" value={`${memoryFileProfiles}/${hermesNativeProfiles.length}`} tone={memoryFileProfiles > 0 ? '#67e8f9' : '#94a3b8'} />
-                      <MiniStat label="ext" value={`${memoryExternalActiveProfiles > 0 ? memoryExternalActiveProfiles : memoryExternalReadyProfiles}/${hermesNativeProfiles.length}`} tone={(memoryExternalActiveProfiles > 0 || memoryExternalReadyProfiles > 0) ? '#a78bfa' : '#94a3b8'} />
+                      <MiniStat label="built-in" value={`${memoryEnabledProfiles}/${hermesNativeProfiles.length}`} tone={memoryEnabledProfiles > 0 ? '#10b981' : '#9485a8'} />
+                      <MiniStat label="files" value={`${memoryFileProfiles}/${hermesNativeProfiles.length}`} tone={memoryFileProfiles > 0 ? '#b580ff' : '#9485a8'} />
+                      <MiniStat label="ext" value={`${memoryExternalActiveProfiles > 0 ? memoryExternalActiveProfiles : memoryExternalReadyProfiles}/${hermesNativeProfiles.length}`} tone={(memoryExternalActiveProfiles > 0 || memoryExternalReadyProfiles > 0) ? '#a78bfa' : '#9485a8'} />
                     </div>
                     {activeProfileMeta?.memory_overview && (
                       <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-                        <div style={{ fontSize: 9, color: '#cbd5e1', fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: 9, color: '#d8d0f0', fontFamily: 'monospace' }}>
                           {(activeProfileMeta.display_name ?? activeProfileMeta.hermes_profile ?? activeProfileMeta.name)} · {activeProfileMeta.memory_overview.memory_enabled ? 'built-in memory enabled' : 'built-in memory disabled'}
                         </div>
-                        <div style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                           memory file: {activeProfileMeta.memory_overview.memory_file_exists ? `${activeProfileMeta.memory_overview.memory_char_count} chars` : 'missing'} · user file: {activeProfileMeta.memory_overview.user_file_exists ? `${activeProfileMeta.memory_overview.user_char_count} chars` : 'missing'}
                         </div>
-                        <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                           limits: {activeProfileMeta.memory_overview.memory_char_limit ?? '—'} / {activeProfileMeta.memory_overview.user_char_limit ?? '—'} · flush {activeProfileMeta.memory_overview.flush_min_turns ?? '—'} turns
                         </div>
-                        <div style={{ fontSize: 8, color: activeProfileMeta.memory_overview.external_provider_active ? '#10b981' : activeProfileMeta.memory_overview.external_provider_available ? '#94a3b8' : '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 8, color: activeProfileMeta.memory_overview.external_provider_active ? '#10b981' : activeProfileMeta.memory_overview.external_provider_available ? '#9485a8' : '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                           external: {activeProfileMeta.memory_overview.external_provider_hint}
                           {activeProfileMeta.memory_overview.external_provider_endpoint ? ` · ${activeProfileMeta.memory_overview.external_provider_endpoint}` : ''}
                         </div>
                         {activeProfileMeta.memory_overview.external_provider_candidates.length > 0 && (
-                          <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             candidates: {activeProfileMeta.memory_overview.external_provider_candidates.join(', ')}
                           </div>
                         )}
                         {activeProfileMeta.session_overview && (
-                          <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             session search: {activeProfileMeta.session_overview.search_ready ? 'ready' : 'not ready'}
                           </div>
                         )}
@@ -746,30 +746,30 @@ function HermesTab({
                   </div>
                 )}
                 {hermesNativeProfiles.length > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,23,42,0.45)' }}>
-                    <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,8,30,0.45)' }}>
+                    <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
                       skills
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
-                      <MiniStat label="shared" value={`${sharedSkillProfiles}/${hermesNativeProfiles.length}`} tone={sharedSkillProfiles > 0 ? '#10b981' : '#94a3b8'} />
-                      <MiniStat label="local" value={activeProfileMeta?.skill_overview?.local_skill_count ?? 0} tone="#67e8f9" />
+                      <MiniStat label="shared" value={`${sharedSkillProfiles}/${hermesNativeProfiles.length}`} tone={sharedSkillProfiles > 0 ? '#10b981' : '#9485a8'} />
+                      <MiniStat label="local" value={activeProfileMeta?.skill_overview?.local_skill_count ?? 0} tone="#b580ff" />
                       <MiniStat label="external" value={activeProfileMeta?.skill_overview?.external_skill_count ?? 0} tone="#a78bfa" />
                     </div>
                     {activeProfileMeta?.skill_overview && (
                       <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-                        <div style={{ fontSize: 9, color: '#cbd5e1', fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: 9, color: '#d8d0f0', fontFamily: 'monospace' }}>
                           {(activeProfileMeta.display_name ?? activeProfileMeta.hermes_profile ?? activeProfileMeta.name)} · {activeProfileMeta.skill_overview.shared_skills_connected ? 'shared skills connected' : 'local skills only'}
                         </div>
-                        <div style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                           local dir: {activeProfileMeta.skill_overview.local_dir}
                         </div>
                         {activeProfileMeta.skill_overview.local_sample_skills.length > 0 && (
-                          <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             local sample: {activeProfileMeta.skill_overview.local_sample_skills.join(', ')}
                           </div>
                         )}
                         {activeProfileMeta.skill_overview.external_dirs.map((dir) => (
-                          <div key={dir.path} style={{ fontSize: 8, color: dir.exists ? '#475569' : '#7f1d1d', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div key={dir.path} style={{ fontSize: 8, color: dir.exists ? '#42326a' : '#7f1d1d', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             external: {dir.path} · {dir.skill_count} skills{dir.sample_skills.length > 0 ? ` · ${dir.sample_skills.join(', ')}` : ''}
                           </div>
                         ))}
@@ -778,46 +778,46 @@ function HermesTab({
                   </div>
                 )}
                 {hermesNativeProfiles.length > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,23,42,0.45)' }}>
-                    <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,8,30,0.45)' }}>
+                    <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
                       provider graph
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
-                      <MiniStat label="profiles" value={`${providerReadyProfiles}/${hermesNativeProfiles.length}`} tone={providerReadyProfiles > 0 ? '#10b981' : '#94a3b8'} />
-                      <MiniStat label="fallback" value={`${fallbackProfiles}/${hermesNativeProfiles.length}`} tone={fallbackProfiles > 0 ? '#f59e0b' : '#94a3b8'} />
-                      <MiniStat label="smart" value={`${smartRoutingProfiles}/${hermesNativeProfiles.length}`} tone={smartRoutingProfiles > 0 ? '#67e8f9' : '#94a3b8'} />
+                      <MiniStat label="profiles" value={`${providerReadyProfiles}/${hermesNativeProfiles.length}`} tone={providerReadyProfiles > 0 ? '#10b981' : '#9485a8'} />
+                      <MiniStat label="fallback" value={`${fallbackProfiles}/${hermesNativeProfiles.length}`} tone={fallbackProfiles > 0 ? '#f59e0b' : '#9485a8'} />
+                      <MiniStat label="smart" value={`${smartRoutingProfiles}/${hermesNativeProfiles.length}`} tone={smartRoutingProfiles > 0 ? '#b580ff' : '#9485a8'} />
                     </div>
                     {activeProfileMeta?.provider_overview && (
                       <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-                        <div style={{ fontSize: 9, color: '#cbd5e1', fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: 9, color: '#d8d0f0', fontFamily: 'monospace' }}>
                           {(activeProfileMeta.display_name ?? activeProfileMeta.hermes_profile ?? activeProfileMeta.name)} · {activeProfileMeta.provider_overview.primary?.provider ?? 'unconfigured'}
                         </div>
                         {activeProfileMeta.provider_overview.primary?.model && (
-                          <div style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             primary: {activeProfileMeta.provider_overview.primary.model}
                           </div>
                         )}
                         {activeProfileMeta.provider_overview.cheap_model?.model && (
-                          <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             cheap route: {activeProfileMeta.provider_overview.cheap_model.model}
                           </div>
                         )}
                         {(activeProfileMeta.provider_overview.fallback_count ?? 0) > 0 && (
-                          <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             fallback: {activeProfileMeta.provider_overview.fallbacks.map((fallback) => fallback.model ?? fallback.provider ?? 'fallback').join(' · ')}
                           </div>
                         )}
                         {(activeProfileMeta.provider_overview.auxiliary_count ?? 0) > 0 && (
-                          <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             auxiliary: {Object.keys(activeProfileMeta.provider_overview.auxiliary).join(', ')}
                           </div>
                         )}
                         {activeProfileMeta.provider_overview.delegation?.model && (
-                          <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             delegation: {activeProfileMeta.provider_overview.delegation.model}
                           </div>
                         )}
-                        <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                           endpoints: {activeProfileMeta.provider_overview.unique_endpoint_count} · models: {activeProfileMeta.provider_overview.unique_model_count}
                         </div>
                       </div>
@@ -825,37 +825,37 @@ function HermesTab({
                   </div>
                 )}
                 {hermesNativeProfiles.length > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,23,42,0.45)' }}>
-                    <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,8,30,0.45)' }}>
+                    <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
                       checkpoints
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
-                      <MiniStat label="ready" value={`${checkpointReadyProfiles}/${hermesNativeProfiles.length}`} tone={checkpointReadyProfiles > 0 ? '#10b981' : '#94a3b8'} />
-                      <MiniStat label="snapshots" value={activeProfileMeta?.checkpoint_overview?.snapshot_count ?? 0} tone="#67e8f9" />
+                      <MiniStat label="ready" value={`${checkpointReadyProfiles}/${hermesNativeProfiles.length}`} tone={checkpointReadyProfiles > 0 ? '#10b981' : '#9485a8'} />
+                      <MiniStat label="snapshots" value={activeProfileMeta?.checkpoint_overview?.snapshot_count ?? 0} tone="#b580ff" />
                       <MiniStat label="max" value={activeProfileMeta?.checkpoint_overview?.max_snapshots ?? '—'} tone="#a78bfa" />
                     </div>
                     {activeProfileMeta?.checkpoint_overview && (
                       <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-                        <div style={{ fontSize: 9, color: '#cbd5e1', fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: 9, color: '#d8d0f0', fontFamily: 'monospace' }}>
                           {(activeProfileMeta.display_name ?? activeProfileMeta.hermes_profile ?? activeProfileMeta.name)} · {activeProfileMeta.checkpoint_overview.rollback_ready ? 'rollback ready' : activeProfileMeta.checkpoint_overview.enabled ? 'checkpointing enabled' : 'checkpointing off'}
                         </div>
                         {activeProfileMeta.checkpoint_overview.latest_snapshot_at && (
-                          <div style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             latest snapshot: {new Date(activeProfileMeta.checkpoint_overview.latest_snapshot_at).toLocaleString()}
                           </div>
                         )}
-                        <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                           {activeProfileMeta.checkpoint_overview.rollback_diff_hint}
                         </div>
-                        <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                           {activeProfileMeta.checkpoint_overview.rollback_hint}
                         </div>
                       </div>
                     )}
                   </div>
                 )}
-                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,23,42,0.45)' }}>
-                  <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,8,30,0.45)' }}>
+                  <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
                     background work
                   </div>
                   <form onSubmit={launchBackgroundTask} style={{ display: 'grid', gap: 8 }}>
@@ -863,7 +863,7 @@ function HermesTab({
                       <select
                         value={backgroundProfile}
                         onChange={(e) => setBackgroundProfile(e.target.value)}
-                        style={{ background: '#090b13', border: '1px solid #182033', color: '#e2e8f0', borderRadius: 8, padding: '7px 9px', fontSize: 10, fontFamily: 'monospace' }}
+                        style={{ background: '#0a0614', border: '1px solid #1a1030', color: '#ece0ff', borderRadius: 8, padding: '7px 9px', fontSize: 10, fontFamily: 'monospace' }}
                       >
                         {hermesNativeProfiles.map((profile) => (
                           <option key={profile.name} value={profile.hermes_profile ?? profile.display_name ?? profile.name}>
@@ -879,8 +879,8 @@ function HermesTab({
                           padding: '6px 10px',
                           borderRadius: 8,
                           border: 'none',
-                          background: backgroundBusy ? '#06b6d466' : '#06b6d4',
-                          color: '#0a0a0f',
+                          background: backgroundBusy ? '#8a50e066' : '#8a50e0',
+                          color: '#0a0614',
                           cursor: backgroundBusy ? 'not-allowed' : 'pointer',
                           fontFamily: 'monospace',
                           opacity: backgroundPrompt.trim() ? 1 : 0.4,
@@ -888,7 +888,7 @@ function HermesTab({
                       >
                         {backgroundBusy ? 'Launching…' : 'Launch background'}
                       </button>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
                         <input
                           type="checkbox"
                           checked={backgroundWorktree}
@@ -902,48 +902,48 @@ function HermesTab({
                       onChange={(e) => setBackgroundPrompt(e.target.value)}
                       rows={2}
                       placeholder="Run a deeper Hermes task without blocking the active session..."
-                      style={{ background: '#090b13', border: '1px solid #182033', color: '#e2e8f0', borderRadius: 8, padding: '9px 10px', fontSize: 10, fontFamily: 'monospace', resize: 'vertical' }}
+                      style={{ background: '#0a0614', border: '1px solid #1a1030', color: '#ece0ff', borderRadius: 8, padding: '9px 10px', fontSize: 10, fontFamily: 'monospace', resize: 'vertical' }}
                     />
                   </form>
                   {backgroundTasks.length > 0 && (
                     <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
                       {backgroundTasks.slice(0, 4).map((task) => (
-                        <div key={task.id} style={{ padding: '7px 0', borderTop: '1px solid rgba(15,23,42,0.45)', display: 'grid', gap: 4 }}>
+                        <div key={task.id} style={{ padding: '7px 0', borderTop: '1px solid rgba(15,8,30,0.45)', display: 'grid', gap: 4 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-                            <span style={{ fontSize: 9, color: '#cbd5e1', fontFamily: 'monospace' }}>{task.title}</span>
-                            <span style={{ fontSize: 8, color: task.running ? '#10b981' : '#94a3b8', fontFamily: 'monospace', textTransform: 'uppercase' }}>{task.status}</span>
+                            <span style={{ fontSize: 9, color: '#d8d0f0', fontFamily: 'monospace' }}>{task.title}</span>
+                            <span style={{ fontSize: 8, color: task.running ? '#10b981' : '#9485a8', fontFamily: 'monospace', textTransform: 'uppercase' }}>{task.status}</span>
                           </div>
-                          <div style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             {task.profile} · {new Date(task.started_at).toLocaleString()}
                           </div>
                           {task.worktree_path && (
-                            <div style={{ fontSize: 8, color: '#94a3b8', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: '#9485a8', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               {task.worktree_path}
                             </div>
                           )}
                           {task.worktree_branch && (
-                            <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               {task.worktree_branch}
                             </div>
                           )}
                           {task.mode === 'worktree' && hermesProfileMeta[task.profile]?.checkpoint_overview && (
-                            <div style={{ fontSize: 8, color: hermesProfileMeta[task.profile]?.checkpoint_overview?.rollback_ready ? '#94a3b8' : '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: hermesProfileMeta[task.profile]?.checkpoint_overview?.rollback_ready ? '#9485a8' : '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               {hermesProfileMeta[task.profile]?.checkpoint_overview?.rollback_ready
                                 ? `${hermesProfileMeta[task.profile]?.checkpoint_overview?.rollback_diff_hint} inside the worktree session`
                                 : 'worktree rollback not ready yet'}
                             </div>
                           )}
-                          <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                             {task.prompt}
                           </div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                            {task.log_path && <span style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace' }}>{task.log_path}</span>}
-                            {task.mode === 'worktree' && task.repo_path && <span style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace' }}>{task.repo_path}</span>}
+                            {task.log_path && <span style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace' }}>{task.log_path}</span>}
+                            {task.mode === 'worktree' && task.repo_path && <span style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace' }}>{task.repo_path}</span>}
                             <button
                               type="button"
                               onClick={() => pollBackgroundTask(task.id)}
                               disabled={backgroundPollBusy === task.id}
-                              style={{ fontSize: 8, padding: '3px 6px', borderRadius: 6, border: '1px solid #1e293b', background: '#0a0a0f', color: backgroundPollBusy === task.id ? '#475569' : '#94a3b8', cursor: backgroundPollBusy === task.id ? 'not-allowed' : 'pointer', fontFamily: 'monospace' }}
+                              style={{ fontSize: 8, padding: '3px 6px', borderRadius: 6, border: '1px solid #1e1035', background: '#0a0614', color: backgroundPollBusy === task.id ? '#42326a' : '#9485a8', cursor: backgroundPollBusy === task.id ? 'not-allowed' : 'pointer', fontFamily: 'monospace' }}
                             >
                               {backgroundPollBusy === task.id ? 'polling' : 'poll'}
                             </button>
@@ -951,7 +951,7 @@ function HermesTab({
                               type="button"
                               onClick={() => loadBackgroundLog(task.id)}
                               disabled={backgroundLogBusy === task.id}
-                              style={{ fontSize: 8, padding: '3px 6px', borderRadius: 6, border: '1px solid #1e293b', background: '#0a0a0f', color: backgroundLogBusy === task.id ? '#475569' : '#94a3b8', cursor: backgroundLogBusy === task.id ? 'not-allowed' : 'pointer', fontFamily: 'monospace' }}
+                              style={{ fontSize: 8, padding: '3px 6px', borderRadius: 6, border: '1px solid #1e1035', background: '#0a0614', color: backgroundLogBusy === task.id ? '#42326a' : '#9485a8', cursor: backgroundLogBusy === task.id ? 'not-allowed' : 'pointer', fontFamily: 'monospace' }}
                             >
                               {backgroundLogBusy === task.id ? 'loading' : 'log'}
                             </button>
@@ -977,7 +977,7 @@ function HermesTab({
                             )}
                           </div>
                           {backgroundLogs[task.id] && (
-                            <pre style={{ margin: 0, padding: '8px 9px', borderRadius: 8, border: '1px solid #182033', background: '#090b13', color: '#94a3b8', fontSize: 8, fontFamily: 'monospace', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                            <pre style={{ margin: 0, padding: '8px 9px', borderRadius: 8, border: '1px solid #1a1030', background: '#0a0614', color: '#9485a8', fontSize: 8, fontFamily: 'monospace', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                               {backgroundLogs[task.id]}
                             </pre>
                           )}
@@ -987,8 +987,8 @@ function HermesTab({
                   )}
                 </div>
                 {quickCommands.length > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,23,42,0.45)' }}>
-                    <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(15,8,30,0.45)' }}>
+                    <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>
                       quick commands
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1004,9 +1004,9 @@ function HermesTab({
                               fontSize: 8,
                               padding: '5px 8px',
                               borderRadius: 999,
-                              border: '1px solid #1e293b',
-                              background: quickCommandBusy === busyKey ? '#1f2937' : '#0a0a0f',
-                              color: quickCommandBusy === busyKey ? '#475569' : '#94a3b8',
+                              border: '1px solid #1e1035',
+                              background: quickCommandBusy === busyKey ? '#1a0e30' : '#0a0614',
+                              color: quickCommandBusy === busyKey ? '#42326a' : '#9485a8',
                               cursor: quickCommandBusy === busyKey ? 'not-allowed' : 'pointer',
                               fontFamily: 'monospace',
                             }}
@@ -1020,7 +1020,7 @@ function HermesTab({
                 )}
               </PanelCard>
             ) : (
-              <p style={{ fontSize: 10, color: '#334155' }}>No active Hermes session</p>
+              <p style={{ fontSize: 10, color: '#2e1e50' }}>No active Hermes session</p>
             )}
           </div>
         </>
@@ -1036,15 +1036,15 @@ function HermesTab({
                 <MiniStat label="allow" value={permissionAuditSummary?.decision_counts?.allow ?? 0} tone="#10b981" />
                 <MiniStat label="deny" value={permissionAuditSummary?.decision_counts?.deny ?? 0} tone="#ef4444" />
                 <MiniStat label="ask" value={permissionAuditSummary?.decision_counts?.ask ?? 0} tone="#f59e0b" />
-                <MiniStat label="bypass" value={permissionAuditSummary?.decision_counts?.bypass ?? 0} tone="#06b6d4" />
+                <MiniStat label="bypass" value={permissionAuditSummary?.decision_counts?.bypass ?? 0} tone="#8a50e0" />
               </div>
               {permissionAuditSummary?.last_event_at && (
-                <div style={{ marginTop: 8, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                <div style={{ marginTop: 8, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                   last event: {new Date(permissionAuditSummary.last_event_at).toLocaleString()}
                 </div>
               )}
               <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace' }}>
                   recent control-plane decisions
                 </div>
                 <button
@@ -1055,9 +1055,9 @@ function HermesTab({
                     fontSize: 8,
                     padding: '3px 6px',
                     borderRadius: 4,
-                    border: '1px solid #1e293b',
-                    background: '#0a0a0f',
-                    color: auditLoading ? '#475569' : '#94a3b8',
+                    border: '1px solid #1e1035',
+                    background: '#0a0614',
+                    color: auditLoading ? '#42326a' : '#9485a8',
                     cursor: auditLoading ? 'not-allowed' : 'pointer',
                     fontFamily: 'monospace',
                   }}
@@ -1070,36 +1070,36 @@ function HermesTab({
 
           {auditEntries.length === 0 ? (
             <PanelCard compact>
-              <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                 no audit entries yet
               </div>
             </PanelCard>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {auditEntries.map((entry, index) => (
-                <details key={`${entry.timestamp}-${index}`} style={{ border: '1px solid #182033', borderRadius: 10, background: 'linear-gradient(180deg, rgba(13,16,32,0.92), rgba(10,12,22,0.92))' }}>
+                <details key={`${entry.timestamp}-${index}`} style={{ border: '1px solid #1a1030', borderRadius: 10, background: 'linear-gradient(180deg, rgba(13,7,24,0.92), rgba(10,5,20,0.92))' }}>
                   <summary style={{ cursor: 'pointer', padding: '9px 10px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-                      <span style={{ fontSize: 8, color: '#cbd5e1', fontFamily: 'monospace' }}>
+                      <span style={{ fontSize: 8, color: '#d8d0f0', fontFamily: 'monospace' }}>
                         {entry.tool ?? 'unknown-tool'}
                         {entry.agent ? ` -> ${entry.agent}` : ''}
                       </span>
-                      <span style={{ fontSize: 8, color: entry.decision === 'allow' ? '#10b981' : entry.decision === 'deny' ? '#ef4444' : entry.decision === 'ask' ? '#f59e0b' : '#06b6d4', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                      <span style={{ fontSize: 8, color: entry.decision === 'allow' ? '#10b981' : entry.decision === 'deny' ? '#ef4444' : entry.decision === 'ask' ? '#f59e0b' : '#8a50e0', fontFamily: 'monospace', textTransform: 'uppercase' }}>
                         {entry.decision}
                       </span>
                     </div>
-                    <div style={{ marginTop: 3, fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
+                    <div style={{ marginTop: 3, fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
                       {new Date(entry.timestamp).toLocaleString()} · source {entry.source} · mode {entry.mode}
                     </div>
                   </summary>
                   <div style={{ padding: '0 10px 10px' }}>
                     {entry.reason && (
-                      <div style={{ marginTop: 3, fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                      <div style={{ marginTop: 3, fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                         {entry.reason}
                       </div>
                     )}
                     {entry.input_summary && (
-                      <div style={{ marginTop: 3, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                      <div style={{ marginTop: 3, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                         input: {entry.input_summary}
                       </div>
                     )}
@@ -1115,7 +1115,7 @@ function HermesTab({
         <div>
           <SectionTitle>Mesh State</SectionTitle>
           {focusedAgent && (
-            <div style={{ marginBottom: 8, fontSize: 8, color: '#67e8f9', fontFamily: 'monospace', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <div style={{ marginBottom: 8, fontSize: 8, color: '#b580ff', fontFamily: 'monospace', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               focused agent: {focusedAgent.label ?? focusedAgent.name}
             </div>
           )}
@@ -1132,10 +1132,10 @@ function HermesTab({
                   setExpandedAgents((current) => ({ ...current, [agent.id]: nextOpen }))
                 }}
                 style={{
-                  border: `1px solid ${focusedAgent?.id === agent.id ? '#0ea5e955' : '#182033'}`,
+                  border: `1px solid ${focusedAgent?.id === agent.id ? '#7040c055' : '#1a1030'}`,
                   borderRadius: 10,
-                  background: 'linear-gradient(180deg, rgba(13,16,32,0.92), rgba(10,12,22,0.92))',
-                  boxShadow: focusedAgent?.id === agent.id ? '0 0 0 1px rgba(6,182,212,0.18)' : 'none',
+                  background: 'linear-gradient(180deg, rgba(13,7,24,0.92), rgba(10,5,20,0.92))',
+                  boxShadow: focusedAgent?.id === agent.id ? '0 0 0 1px rgba(140,80,220,0.18)' : 'none',
                 }}
               >
                 <summary
@@ -1147,68 +1147,68 @@ function HermesTab({
                   })}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 10, color: '#e2e8f0', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: 10, color: '#ece0ff', fontFamily: 'monospace' }}>
                       {agent.label ?? agent.name}
                     </span>
-                    <span style={{ fontSize: 8, color: agent.health_status === 'healthy' ? '#10b981' : agent.health_status === 'degraded' ? '#f59e0b' : '#475569', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: 8, color: agent.health_status === 'healthy' ? '#10b981' : agent.health_status === 'degraded' ? '#f59e0b' : '#42326a', fontFamily: 'monospace', textTransform: 'uppercase' }}>
                       {agent.health_status ?? agent.status}
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 5 }}>
-                    <span style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
-                      runtime: <span style={{ color: '#94a3b8' }}>{agent.runtime_status ?? agent.status}</span>
+                    <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
+                      runtime: <span style={{ color: '#9485a8' }}>{agent.runtime_status ?? agent.status}</span>
                     </span>
-                    <span style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
-                      presence: <span style={{ color: agent.presence?.status === 'online' ? '#10b981' : agent.presence?.status === 'registered' ? '#06b6d4' : '#ef4444' }}>{agent.presence?.status ?? 'unknown'}</span>
+                    <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
+                      presence: <span style={{ color: agent.presence?.status === 'online' ? '#10b981' : agent.presence?.status === 'registered' ? '#8a50e0' : '#ef4444' }}>{agent.presence?.status ?? 'unknown'}</span>
                     </span>
-                    <span style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
-                      tier: <span style={{ color: agent.tier === 'premium' ? '#f59e0b' : agent.tier === 'local-default' ? '#a855f7' : '#94a3b8' }}>{agent.tier ?? 'unknown'}</span>
+                    <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
+                      tier: <span style={{ color: agent.tier === 'premium' ? '#f59e0b' : agent.tier === 'local-default' ? '#a855f7' : '#9485a8' }}>{agent.tier ?? 'unknown'}</span>
                     </span>
                   </div>
                 </summary>
                 <div style={{ padding: '0 10px 10px' }}>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 5 }}>
-                    <span style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
-                      maestro: <span style={{ color: '#94a3b8' }}>{agent.registration_status === 'registered' ? (agent.orchestration_status ?? 'unknown') : 'not registered'}</span>
+                    <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
+                      maestro: <span style={{ color: '#9485a8' }}>{agent.registration_status === 'registered' ? (agent.orchestration_status ?? 'unknown') : 'not registered'}</span>
                     </span>
-                    <span style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
-                      activity: <span style={{ color: agent.activity_status === 'live' ? '#10b981' : agent.activity_status === 'recent' ? '#06b6d4' : agent.activity_status === 'idle' ? '#f59e0b' : agent.activity_status === 'stale' ? '#ef4444' : '#94a3b8' }}>{agent.activity_status ?? 'unknown'}</span>
+                    <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
+                      activity: <span style={{ color: agent.activity_status === 'live' ? '#10b981' : agent.activity_status === 'recent' ? '#8a50e0' : agent.activity_status === 'idle' ? '#f59e0b' : agent.activity_status === 'stale' ? '#ef4444' : '#9485a8' }}>{agent.activity_status ?? 'unknown'}</span>
                     </span>
-                    <span style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
                       availability: <span style={{ color: agent.availability_status === 'available' ? '#10b981' : agent.availability_status === 'rate_limited' ? '#f59e0b' : '#ef4444' }}>{agent.availability_status ?? 'available'}</span>
                     </span>
                   </div>
                   {agent.last_active && (
-                    <div style={{ marginTop: 3, fontSize: 8, color: '#475569', fontFamily: 'monospace' }}>
+                    <div style={{ marginTop: 3, fontSize: 8, color: '#42326a', fontFamily: 'monospace' }}>
                       last active: {new Date(agent.last_active).toLocaleString()} ({fmtAgo(agent.activity_age_seconds)})
                     </div>
                   )}
                   {agent.status_reason && (
-                    <div style={{ marginTop: 3, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                    <div style={{ marginTop: 3, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                       {agent.status_reason}
                     </div>
                   )}
                   {agent.presence?.reason && (
-                    <div style={{ marginTop: 3, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                    <div style={{ marginTop: 3, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                       presence: {agent.presence.reason}
                     </div>
                   )}
                   {agent.availability_reason && (
-                    <div style={{ marginTop: 3, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                    <div style={{ marginTop: 3, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                       availability note: {agent.availability_reason}
                     </div>
                   )}
                   {agent.routing_group === 'premium-pool' && (
                     <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>set:</span>
+                      <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>set:</span>
                       <select
                         value={agent.availability_status ?? 'available'}
                         onChange={(e) => updateAvailability(agent.name, e.target.value)}
                         disabled={availabilityBusy === agent.name}
                         style={{
-                          background: '#0a0a0f',
-                          border: '1px solid #1e293b',
-                          color: '#94a3b8',
+                          background: '#0a0614',
+                          border: '1px solid #1e1035',
+                          color: '#9485a8',
                           borderRadius: 4,
                           padding: '2px 6px',
                           fontSize: 8,
@@ -1222,13 +1222,13 @@ function HermesTab({
                     </div>
                   )}
                   {(agent.reserve_for && agent.reserve_for.length > 0) && (
-                    <div style={{ marginTop: 3, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                    <div style={{ marginTop: 3, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                       reserve: {agent.reserve_for.join(', ')}
                     </div>
                   )}
                   {(agent.local_profiles && agent.local_profiles.length > 0) && (
                     <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace', textTransform: 'uppercase' }}>
                         local profiles
                       </div>
                       {agent.local_profiles.map((profile) => (
@@ -1236,19 +1236,19 @@ function HermesTab({
                           key={profile.name}
                           style={{
                             padding: '5px 6px',
-                            border: '1px solid #182033',
+                            border: '1px solid #1a1030',
                             borderRadius: 8,
-                            background: '#090b13',
+                            background: '#0a0614',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: 2,
                           }}
                         >
-                          <div style={{ fontSize: 8, color: '#cbd5e1', fontFamily: 'monospace' }}>
+                          <div style={{ fontSize: 8, color: '#d8d0f0', fontFamily: 'monospace' }}>
                             {(profile.display_name ?? profile.name)}: {profile.model.split('/').pop() ?? profile.model}
                           </div>
                           {(profile.profile_kind || profile.runtime) && (
-                            <div style={{ fontSize: 8, color: '#38bdf8', fontFamily: 'monospace' }}>
+                            <div style={{ fontSize: 8, color: '#a070e0', fontFamily: 'monospace' }}>
                               kind: {profile.profile_kind === 'hermes-native' ? 'hermes-profile' : (profile.runtime ?? profile.profile_kind)}
                             </div>
                           )}
@@ -1257,72 +1257,72 @@ function HermesTab({
                               mode: {profile.mode}
                             </div>
                           )}
-                          <div style={{ fontSize: 8, color: '#64748b', fontFamily: 'monospace' }}>
-                            state: <span style={{ color: profile.running ? '#10b981' : profile.installed ? '#94a3b8' : '#ef4444' }}>
+                          <div style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
+                            state: <span style={{ color: profile.running ? '#10b981' : profile.installed ? '#9485a8' : '#ef4444' }}>
                               {profile.running ? 'running' : profile.installed ? 'installed' : 'missing'}
                             </span>
                           </div>
                           {profile.hermes_profile && (
-                            <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               hermes profile: {profile.hermes_profile}
                             </div>
                           )}
                           {profile.purpose && (
-                            <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               {profile.purpose}
                             </div>
                           )}
                           {profile.provider && (
-                            <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               provider: {profile.provider}
                             </div>
                           )}
                           {profile.provider_overview && (
-                            <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               provider graph: {profile.provider_overview.smart_routing_enabled ? 'smart' : 'fixed'} · {profile.provider_overview.fallback_count} fallback · {profile.provider_overview.auxiliary_count} aux
                             </div>
                           )}
                           {profile.toolset_overview && (
                             <>
-                              <div style={{ fontSize: 8, color: '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                              <div style={{ fontSize: 8, color: '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                                 toolsets: {profile.toolset_overview.all_tools ? 'all' : profile.toolset_overview.toolsets.join(', ')}
                               </div>
-                              <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                              <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                                 tools: {profile.toolset_overview.has_terminal ? 'terminal ' : ''}{profile.toolset_overview.has_memory ? 'memory ' : ''}{profile.toolset_overview.has_delegation ? 'delegation ' : ''}{profile.toolset_overview.has_browser ? 'browser' : ''}
                               </div>
                             </>
                           )}
                           {profile.skill_overview && (
-                            <div style={{ fontSize: 8, color: profile.skill_overview.shared_skills_connected ? '#10b981' : '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: profile.skill_overview.shared_skills_connected ? '#10b981' : '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               skills: {profile.skill_overview.local_skill_count} local · {profile.skill_overview.external_skill_count} external
                             </div>
                           )}
                           {profile.memory_overview && (
                             <>
-                              <div style={{ fontSize: 8, color: profile.memory_overview.memory_enabled ? '#10b981' : '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                              <div style={{ fontSize: 8, color: profile.memory_overview.memory_enabled ? '#10b981' : '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                                 memory: {profile.memory_overview.memory_enabled ? 'built-in on' : 'built-in off'} · {profile.memory_overview.external_provider_hint}
                               </div>
-                              <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                              <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                                 files: M {profile.memory_overview.memory_char_count}c · U {profile.memory_overview.user_char_count}c
                               </div>
                             </>
                           )}
                           {profile.base_url && (
-                            <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               endpoint: {profile.base_url}
                             </div>
                           )}
                           {profile.alias_path && (
-                            <div style={{ fontSize: 8, color: profile.alias_installed ? '#64748b' : '#ef4444', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 8, color: profile.alias_installed ? '#5e4a78' : '#ef4444', fontFamily: 'monospace', lineHeight: 1.5 }}>
                               alias: {profile.alias_installed ? profile.alias_path : 'missing'}
                             </div>
                           )}
                           {profile.checkpoint_overview && (
                             <>
-                              <div style={{ fontSize: 8, color: profile.checkpoint_overview.rollback_ready ? '#10b981' : '#475569', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                              <div style={{ fontSize: 8, color: profile.checkpoint_overview.rollback_ready ? '#10b981' : '#42326a', fontFamily: 'monospace', lineHeight: 1.5 }}>
                                 checkpoints: {profile.checkpoint_overview.enabled ? `${profile.checkpoint_overview.snapshot_count} ready` : 'disabled'}
                               </div>
-                              <div style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                              <div style={{ fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                                 {profile.checkpoint_overview.rollback_diff_hint}
                               </div>
                             </>
@@ -1338,8 +1338,8 @@ function HermesTab({
                                   padding: '3px 6px',
                                   borderRadius: 4,
                                   border: 'none',
-                                  background: !profile.installed || profile.running ? '#1f2937' : '#10b981',
-                                  color: !profile.installed || profile.running ? '#64748b' : '#0a0a0f',
+                                  background: !profile.installed || profile.running ? '#1a0e30' : '#10b981',
+                                  color: !profile.installed || profile.running ? '#5e4a78' : '#0a0614',
                                   cursor: !profile.installed || profile.running ? 'not-allowed' : 'pointer',
                                   fontFamily: 'monospace',
                                 }}
@@ -1355,8 +1355,8 @@ function HermesTab({
                                   padding: '3px 6px',
                                   borderRadius: 4,
                                   border: 'none',
-                                  background: profile.running ? '#ef4444' : '#1f2937',
-                                  color: profile.running ? '#0a0a0f' : '#64748b',
+                                  background: profile.running ? '#ef4444' : '#1a0e30',
+                                  color: profile.running ? '#0a0614' : '#5e4a78',
                                   cursor: profile.running ? 'pointer' : 'not-allowed',
                                   fontFamily: 'monospace',
                                 }}
@@ -1370,7 +1370,7 @@ function HermesTab({
                     </div>
                   )}
                   {agent.fallback_to && (
-                    <div style={{ marginTop: 3, fontSize: 8, color: '#334155', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                    <div style={{ marginTop: 3, fontSize: 8, color: '#2e1e50', fontFamily: 'monospace', lineHeight: 1.5 }}>
                       failover: {agent.fallback_to}
                     </div>
                   )}
@@ -1398,7 +1398,7 @@ export default function MeshPanel({
   }, [focus])
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'linear-gradient(180deg, rgba(14,24,40,0.98), rgba(7,11,19,0.99))' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'linear-gradient(180deg, rgba(14,8,28,0.98), rgba(7,3,14,0.99))' }}>
       <TabBar active={activeTab} onChange={setActiveTab} />
       {activeTab === 'logs' && <LogsTab />}
       {activeTab === 'amp' && <AmpInbox />}
