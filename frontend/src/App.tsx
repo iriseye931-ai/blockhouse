@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useDashboardStore } from './store/dashboardStore'
-import type { GraphSelection, SecurityPosture, SignalWatcherState } from './types'
+import type { GraphSelection, SignalWatcherState } from './types'
 import MeshGraph from './components/MeshGraph'
 
 // ── Color palette ─────────────────────────────────────────────────────────────
 
 const C = {
-  text: '#effcff',
-  soft: '#7aabbd',
-  dim: '#345668',
-  cyan: '#dffbff',
-  teal: '#9aefff',
+  text: '#f4eeff',
+  soft: '#9b85c8',
+  dim: '#4a3568',
+  cyan: '#e8d8ff',
+  teal: '#b580ff',
   // status — canonical; keep in sync with MeshGraph STATUS_COLORS
   green: '#79ff98',
   amber: '#f0c040',
@@ -68,7 +68,7 @@ function FloatingParticles() {
         const a = p.alpha * Math.min(p.life * 4, 1)
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(165,235,255,${a})`
+        ctx.fillStyle = `rgba(190,150,255,${a})`
         ctx.fill()
       }
       id = requestAnimationFrame(frame)
@@ -89,17 +89,17 @@ function VolumetricFog() {
     <>
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 70% 50% at 28% 62%, rgba(16,60,130,0.15), transparent)',
+        background: 'radial-gradient(ellipse 70% 50% at 28% 62%, rgba(80,30,140,0.18), transparent)',
         animation: 'fog-breathe 12s ease-in-out infinite',
       }} />
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 60% 45% at 72% 38%, rgba(10,50,120,0.12), transparent)',
+        background: 'radial-gradient(ellipse 60% 45% at 72% 38%, rgba(60,20,120,0.14), transparent)',
         animation: 'fog-breathe 16s ease-in-out infinite 5s',
       }} />
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 80% 30% at 50% 90%, rgba(8,30,80,0.18), transparent)',
+        background: 'radial-gradient(ellipse 80% 30% at 50% 90%, rgba(30,10,70,0.22), transparent)',
       }} />
     </>
   )
@@ -153,8 +153,8 @@ function TelemetryStamp({ isConnected }: { isConnected: boolean }) {
           alignItems: 'center',
           gap: 6,
           padding: '5px 8px',
-          border: '1px solid rgba(156,234,255,0.22)',
-          background: 'linear-gradient(180deg, rgba(5,14,22,0.78), rgba(4,10,16,0.62))',
+          border: '1px solid rgba(180,130,255,0.22)',
+          background: 'linear-gradient(180deg, rgba(12,6,24,0.82), rgba(8,4,18,0.66))',
           color: '#effcff',
           fontSize: 12,
           letterSpacing: '0.08em',
@@ -217,8 +217,8 @@ function StatusLegend() {
         alignItems: 'center',
         gap: 6,
         padding: '5px 9px',
-        border: '1px solid rgba(120,210,255,0.14)',
-        background: 'rgba(4,10,16,0.36)',
+        border: '1px solid rgba(160,100,255,0.16)',
+        background: 'rgba(10,5,20,0.38)',
       }}
     >
       <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
@@ -285,7 +285,7 @@ function StatPill({ label, value, sub, warn }: { label: string; value: string; s
       padding: '6px 14px 7px',
       borderRadius: 0,
       border: `1px solid ${warn || (numericPct != null && numericPct > 85) ? 'rgba(255,176,77,0.44)' : numericPct != null && numericPct > 70 ? 'rgba(240,192,64,0.4)' : 'rgba(100,210,255,0.34)'}`,
-      background: 'rgba(4,12,28,0.72)',
+      background: 'rgba(10,5,22,0.74)',
       backdropFilter: 'blur(14px)',
       WebkitBackdropFilter: 'blur(14px)',
       minWidth: 100,
@@ -302,6 +302,7 @@ function OpsStrip({ onSelect }: { onSelect: (selection: GraphSelection) => void 
   const serviceHistory = useDashboardStore((s) => s.serviceHistory)
   const routingSummary = useDashboardStore((s) => s.routingSummary)
   const memorySummary = useDashboardStore((s) => s.memorySummary)
+  const securityPosture = useDashboardStore((s) => s.securityPosture)
 
   const serviceItems = [
     ['Gateway', 'openviking', services.openviking?.status],
@@ -322,50 +323,79 @@ function OpsStrip({ onSelect }: { onSelect: (selection: GraphSelection) => void 
   const toneFor = (status?: string) =>
     status === 'up' || status === 'healthy' ? C.green : status === 'down' ? C.red : C.amber
 
+  const secChips = securityPosture ? [
+    { label: 'Localhost', ok: securityPosture.all_localhost_bound, title: 'All mesh ports bound to 127.0.0.1' },
+    { label: 'Tailscale', ok: securityPosture.tailscale_up, title: 'Tailscale VPN' },
+    { label: 'xSearch', ok: securityPosture.xsearch_oauth, title: 'xAI Grok OAuth' },
+  ] : []
+
   return (
     <div
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        flexWrap: 'wrap',
+        display: 'grid',
+        gap: 6,
         padding: '8px 12px',
-        border: '1px solid rgba(120,210,255,0.14)',
-        background: 'rgba(4,10,16,0.34)',
+        border: '1px solid rgba(160,100,255,0.16)',
+        background: 'rgba(10,5,20,0.36)',
       }}
     >
-      <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-        Ops
-      </span>
-      {serviceItems.map(([label, serviceKey, status]) => (
+      {/* Row 1 — service status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+          Ops
+        </span>
+        {serviceItems.map(([label, serviceKey, status]) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => onSelect({ type: 'service', key: serviceKey, label })}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            <span style={{ width: 4, height: 4, borderRadius: '50%', background: toneFor(status), boxShadow: `0 0 6px ${toneFor(status)}` }} />
+            {label}
+            <Sparkline points={serviceHistory[historyKeys[label]]} />
+          </button>
+        ))}
+        <span style={{ width: 1, height: 12, background: 'rgba(160,100,255,0.14)' }} />
         <button
-          key={label}
           type="button"
-          onClick={() => onSelect({ type: 'service', key: serviceKey, label })}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+          onClick={() => onSelect({ type: 'service', key: 'memory_mcp', label: 'Memory' })}
+          style={{ fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+          title="View memory service details"
         >
-          <span style={{ width: 4, height: 4, borderRadius: '50%', background: toneFor(status), boxShadow: `0 0 6px ${toneFor(status)}` }} />
-          {label}
-          <Sparkline points={serviceHistory[historyKeys[label]]} />
+          MEM · {routingSummary?.memory_mode ?? memorySummary?.primary_cause?.kind ?? 'healthy'}
         </button>
-      ))}
-      <span style={{ width: 1, height: 12, background: 'rgba(120,210,255,0.12)' }} />
-      <button
-        type="button"
-        onClick={() => onSelect({ type: 'service', key: 'memory_mcp', label: 'Memory' })}
-        style={{ fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
-        title="View memory service details"
-      >
-        MEM · {routingSummary?.memory_mode ?? memorySummary?.primary_cause?.kind ?? 'healthy'}
-      </button>
-      <button
-        type="button"
-        onClick={() => onSelect({ type: 'agent', key: (routingSummary?.guidance?.memory_heavy ?? 'hermes').toLowerCase(), label: routingSummary?.guidance?.memory_heavy ?? 'Hermes' })}
-        style={{ fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
-        title="View active routing agent"
-      >
-        VIA → {routingSummary?.guidance?.memory_heavy ?? '—'}{routingSummary?.guidance?.memory_heavy?.toLowerCase() === 'hermes' && routingSummary?.profile_guidance?.memory_heavy ? ` · ${routingSummary.profile_guidance.memory_heavy}` : ''}
-      </button>
+        <button
+          type="button"
+          onClick={() => onSelect({ type: 'agent', key: (routingSummary?.guidance?.memory_heavy ?? 'hermes').toLowerCase(), label: routingSummary?.guidance?.memory_heavy ?? 'Hermes' })}
+          style={{ fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
+          title="View active routing agent"
+        >
+          VIA → {routingSummary?.guidance?.memory_heavy ?? '—'}{routingSummary?.guidance?.memory_heavy?.toLowerCase() === 'hermes' && routingSummary?.profile_guidance?.memory_heavy ? ` · ${routingSummary.profile_guidance.memory_heavy}` : ''}
+        </button>
+      </div>
+
+      {/* Row 2 — security posture chips */}
+      {secChips.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderTop: '1px solid rgba(160,100,255,0.10)', paddingTop: 5 }}>
+          <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+            Sec
+          </span>
+          {secChips.map(({ label, ok, title }) => (
+            <span
+              key={label}
+              title={title}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: ok ? C.green : C.amber, letterSpacing: '0.12em', textTransform: 'uppercase' }}
+            >
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: ok ? C.green : C.amber, boxShadow: `0 0 5px ${ok ? C.green : C.amber}` }} />
+              {label}
+            </span>
+          ))}
+          <span style={{ fontSize: 9, color: securityPosture?.score === securityPosture?.max_score ? C.green : C.amber, letterSpacing: '0.1em', marginLeft: 2 }}>
+            {securityPosture?.score}/{securityPosture?.max_score}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -403,8 +433,8 @@ function AlertsLine() {
         gap: 8,
         maxWidth: 520,
         padding: '7px 11px',
-        border: '1px solid rgba(120,210,255,0.12)',
-        background: 'rgba(4,10,16,0.28)',
+        border: '1px solid rgba(160,100,255,0.14)',
+        background: 'rgba(10,5,20,0.30)',
       }}
     >
       <span style={{ fontSize: 9, color: primary.tone, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
@@ -456,8 +486,8 @@ function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) =
       style={{
         pointerEvents: 'all',
         minWidth: expanded ? 220 : 170,
-        border: '1px solid rgba(120,210,255,0.14)',
-        background: 'rgba(4,10,16,0.34)',
+        border: '1px solid rgba(160,100,255,0.16)',
+        background: 'rgba(10,5,20,0.36)',
         padding: '9px 12px',
       }}
     >
@@ -504,7 +534,7 @@ function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) =
       </div>
 
       {expanded ? (
-        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(120,210,255,0.1)', display: 'grid', gap: 5 }}>
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(160,100,255,0.12)', display: 'grid', gap: 5 }}>
           {nextJob ? (
             <div style={{ fontSize: 10, color: C.soft, lineHeight: 1.5 }}>
               cron target: <span style={{ color: C.text }}>{nextJob.name}</span>
@@ -518,52 +548,6 @@ function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) =
           </div>
         </div>
       ) : null}
-    </div>
-  )
-}
-
-// ── Security strip ────────────────────────────────────────────────────────────
-
-function SecurityStrip({ posture }: { posture: SecurityPosture | null }) {
-  if (!posture) return null
-
-  const chips: Array<{ label: string; ok: boolean; title: string }> = [
-    { label: 'Localhost', ok: posture.all_localhost_bound, title: `${posture.services.filter(s => !s.localhost_only).map(s => s.name).join(', ') || 'all services'} bound to 127.0.0.1` },
-    { label: 'Tailscale', ok: posture.tailscale_up, title: 'Tailscale VPN status' },
-    { label: 'xSearch', ok: posture.xsearch_oauth, title: 'xAI Grok OAuth for Signal Watcher' },
-  ]
-
-  const allOk = posture.score === posture.max_score
-
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '6px 10px',
-      border: `1px solid ${allOk ? 'rgba(121,255,152,0.18)' : 'rgba(255,176,77,0.22)'}`,
-      background: 'rgba(4,10,16,0.34)',
-    }}>
-      <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase', flexShrink: 0 }}>
-        Sec
-      </span>
-      {chips.map(({ label, ok, title }) => (
-        <span
-          key={label}
-          title={title}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            fontSize: 9, color: ok ? C.green : C.amber,
-            letterSpacing: '0.12em', textTransform: 'uppercase',
-          }}
-        >
-          <span style={{ width: 4, height: 4, borderRadius: '50%', background: ok ? C.green : C.amber, boxShadow: `0 0 5px ${ok ? C.green : C.amber}` }} />
-          {label}
-        </span>
-      ))}
-      <span style={{ fontSize: 9, color: allOk ? C.green : C.amber, letterSpacing: '0.1em', marginLeft: 2 }}>
-        {posture.score}/{posture.max_score}
-      </span>
     </div>
   )
 }
@@ -587,8 +571,8 @@ function SignalWatcherWidget({ watcher }: { watcher: SignalWatcherState | null }
   return (
     <div style={{
       padding: '8px 12px',
-      border: '1px solid rgba(120,210,255,0.14)',
-      background: 'rgba(4,10,16,0.34)',
+      border: '1px solid rgba(160,100,255,0.16)',
+      background: 'rgba(10,5,20,0.36)',
       minWidth: 160,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
@@ -610,7 +594,7 @@ function SignalWatcherWidget({ watcher }: { watcher: SignalWatcherState | null }
       {watcher?.top_finding && (
         <div style={{
           marginTop: 6, paddingTop: 5,
-          borderTop: '1px solid rgba(120,210,255,0.1)',
+          borderTop: '1px solid rgba(160,100,255,0.12)',
           fontSize: 9, color: C.soft, lineHeight: 1.5,
           overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
           maxWidth: 180,
@@ -632,7 +616,6 @@ export default function App() {
   const system = useDashboardStore((s) => s.system)
   const agents = useDashboardStore((s) => s.agents)
   const signalWatcher = useDashboardStore((s) => s.signalWatcher)
-  const securityPosture = useDashboardStore((s) => s.securityPosture)
   const [graphSelection, setGraphSelection] = useState<GraphSelection | null>(null)
 
   const onlineAgents = agents.filter((a) => ['online', 'active', 'busy'].includes(a.status)).length
@@ -642,9 +625,9 @@ export default function App() {
       className="h-screen overflow-hidden"
       style={{
         background: [
-          'radial-gradient(circle at 50% 44%, rgba(130,215,255,0.17), transparent 18%)',
-          'radial-gradient(circle at 50% 50%, rgba(90,180,255,0.09), transparent 36%)',
-          'linear-gradient(180deg, #020609 0%, #010203 100%)',
+          'radial-gradient(circle at 50% 44%, rgba(140,80,255,0.16), transparent 18%)',
+          'radial-gradient(circle at 50% 50%, rgba(90,40,200,0.09), transparent 36%)',
+          'linear-gradient(180deg, #07030f 0%, #04010a 100%)',
         ].join(', '),
         color: C.text,
         fontFamily: '"Orbitron", ui-sans-serif, system-ui, sans-serif',
@@ -678,7 +661,6 @@ export default function App() {
               <div style={{ display: 'grid', gap: 6, justifyItems: 'center', width: 'min(720px, 100%)' }}>
                 <StatusLegend />
                 <OpsStrip onSelect={setGraphSelection} />
-                <SecurityStrip posture={securityPosture} />
                 <AlertsLine />
                 <OpsUtilityBlock onSelect={setGraphSelection} />
               </div>
