@@ -1290,7 +1290,10 @@ export default function MeshGraph({
           position: 'absolute',
           left: isCompact ? 10 : 20,
           top: isCompact ? 10 : 132,
+          bottom: isCompact ? 10 : 20,
           width: isCompact ? 'min(280px, calc(100% - 20px))' : 292,
+          display: 'flex',
+          flexDirection: 'column',
           background: 'linear-gradient(160deg, rgba(8,4,18,0.92), rgba(4,2,12,0.88))',
           border: '1px solid rgba(160,100,255,0.24)',
           backdropFilter: 'blur(18px)',
@@ -1308,7 +1311,7 @@ export default function MeshGraph({
             pointerEvents:'none',
           }} />
         ))}
-        <div style={{ padding: '12px 14px 14px' }}>
+        <div style={{ padding: '12px 14px 14px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 10, color: 'rgba(180,140,255,0.6)', letterSpacing: '0.22em', textTransform: 'uppercase' }}>
               Agent Mesh
