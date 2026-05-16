@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useDashboardStore } from './store/dashboardStore'
-import type { GraphSelection } from './types'
+import type { GraphSelection, SecurityPosture, SignalWatcherState } from './types'
 import MeshGraph from './components/MeshGraph'
 
 // ── Color palette ─────────────────────────────────────────────────────────────
@@ -522,12 +522,117 @@ function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) =
   )
 }
 
+// ── Security strip ────────────────────────────────────────────────────────────
+
+function SecurityStrip({ posture }: { posture: SecurityPosture | null }) {
+  if (!posture) return null
+
+  const chips: Array<{ label: string; ok: boolean; title: string }> = [
+    { label: 'Localhost', ok: posture.all_localhost_bound, title: `${posture.services.filter(s => !s.localhost_only).map(s => s.name).join(', ') || 'all services'} bound to 127.0.0.1` },
+    { label: 'Tailscale', ok: posture.tailscale_up, title: 'Tailscale VPN status' },
+    { label: 'xSearch', ok: posture.xsearch_oauth, title: 'xAI Grok OAuth for Signal Watcher' },
+  ]
+
+  const allOk = posture.score === posture.max_score
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '6px 10px',
+      border: `1px solid ${allOk ? 'rgba(121,255,152,0.18)' : 'rgba(255,176,77,0.22)'}`,
+      background: 'rgba(4,10,16,0.34)',
+    }}>
+      <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase', flexShrink: 0 }}>
+        Sec
+      </span>
+      {chips.map(({ label, ok, title }) => (
+        <span
+          key={label}
+          title={title}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            fontSize: 9, color: ok ? C.green : C.amber,
+            letterSpacing: '0.12em', textTransform: 'uppercase',
+          }}
+        >
+          <span style={{ width: 4, height: 4, borderRadius: '50%', background: ok ? C.green : C.amber, boxShadow: `0 0 5px ${ok ? C.green : C.amber}` }} />
+          {label}
+        </span>
+      ))}
+      <span style={{ fontSize: 9, color: allOk ? C.green : C.amber, letterSpacing: '0.1em', marginLeft: 2 }}>
+        {posture.score}/{posture.max_score}
+      </span>
+    </div>
+  )
+}
+
+// ── Signal Watcher widget ─────────────────────────────────────────────────────
+
+function SignalWatcherWidget({ watcher }: { watcher: SignalWatcherState | null }) {
+  const [secs, setSecs] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!watcher?.next_run_in_seconds) { setSecs(null); return }
+    setSecs(watcher.next_run_in_seconds)
+    const id = setInterval(() => setSecs((s) => (s != null && s > 0 ? s - 1 : s)), 1000)
+    return () => clearInterval(id)
+  }, [watcher?.next_run_in_seconds])
+
+  const countdown = secs != null ? fmtIn(secs) : '—'
+  const findings = watcher?.findings_today ?? 0
+  const active = watcher?.job_active ?? false
+
+  return (
+    <div style={{
+      padding: '8px 12px',
+      border: '1px solid rgba(120,210,255,0.14)',
+      background: 'rgba(4,10,16,0.34)',
+      minWidth: 160,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+        <span style={{ width: 4, height: 4, borderRadius: '50%', background: active ? C.teal : C.dim, boxShadow: active ? `0 0 6px ${C.teal}` : 'none' }} />
+        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+          Signal Watch
+        </span>
+      </div>
+      <div style={{ display: 'grid', gap: 3 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Next run</span>
+          <span style={{ fontSize: 11, color: C.soft, letterSpacing: '0.05em' }}>{countdown}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Today</span>
+          <span style={{ fontSize: 11, color: findings > 0 ? C.teal : C.dim, letterSpacing: '0.05em' }}>{findings} signals</span>
+        </div>
+      </div>
+      {watcher?.top_finding && (
+        <div style={{
+          marginTop: 6, paddingTop: 5,
+          borderTop: '1px solid rgba(120,210,255,0.1)',
+          fontSize: 9, color: C.soft, lineHeight: 1.5,
+          overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+          maxWidth: 180,
+          letterSpacing: '0.04em',
+        }}
+          title={watcher.top_finding}
+        >
+          {watcher.top_finding.replace(/^AI SIGNAL \[\w+\] \d{4}-\d{2}-\d{2}: /, '')}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const { isConnected } = useWebSocket()
   const system = useDashboardStore((s) => s.system)
   const agents = useDashboardStore((s) => s.agents)
+  const signalWatcher = useDashboardStore((s) => s.signalWatcher)
+  const securityPosture = useDashboardStore((s) => s.securityPosture)
   const [graphSelection, setGraphSelection] = useState<GraphSelection | null>(null)
 
   const onlineAgents = agents.filter((a) => ['online', 'active', 'busy'].includes(a.status)).length
@@ -573,6 +678,7 @@ export default function App() {
               <div style={{ display: 'grid', gap: 6, justifyItems: 'center', width: 'min(720px, 100%)' }}>
                 <StatusLegend />
                 <OpsStrip onSelect={setGraphSelection} />
+                <SecurityStrip posture={securityPosture} />
                 <AlertsLine />
                 <OpsUtilityBlock onSelect={setGraphSelection} />
               </div>
@@ -580,6 +686,7 @@ export default function App() {
             <div style={{ flex: 1.1, display: 'flex', justifyContent: 'flex-end', pointerEvents: 'all' }}>
               <div style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
                 <TelemetryStamp isConnected={isConnected} />
+                <SignalWatcherWidget watcher={signalWatcher} />
               </div>
             </div>
           </div>

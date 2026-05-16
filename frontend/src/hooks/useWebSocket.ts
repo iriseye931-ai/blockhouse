@@ -33,7 +33,7 @@ export const useWebSocket = () => {
       if (unmountedRef.current) return
       try {
         const msg = JSON.parse(event.data)
-        const { setAgents, setServices, setServiceHistory, setCronJobs, setMemories, setMemorySummary, setMemoryEvents, setLastUpdate, setLlmActive, setVoiceActive, setSystem, setMemoryMonitorLog, setLogs, setAmpMessages, setHermesStatus, setRoutingSummary, setPermissionAuditSummary, setTrendingRepos, addInsight, setInsights, setAgentMessages } =
+        const { setAgents, setServices, setServiceHistory, setCronJobs, setMemories, setMemorySummary, setMemoryEvents, setLastUpdate, setLlmActive, setVoiceActive, setSystem, setMemoryMonitorLog, setLogs, setAmpMessages, setHermesStatus, setRoutingSummary, setPermissionAuditSummary, setTrendingRepos, addInsight, setInsights, setAgentMessages, setSignalWatcher, setSecurityPosture } =
           useDashboardStore.getState()
         setLastUpdate(new Date())
 
@@ -63,6 +63,8 @@ export const useWebSocket = () => {
           if (su.trending_repos) setTrendingRepos(su.trending_repos)
           if (su.insights) setInsights(su.insights)
           if (su.agent_messages) setAgentMessages(su.agent_messages)
+          if (su.signal_watcher) setSignalWatcher(su.signal_watcher)
+          if (su.security_posture) setSecurityPosture(su.security_posture)
         }
       } catch {
         // malformed message — ignore

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Agent, ServiceHealth, ServiceHistoryPoint, CronJob, MemoryEntry, MemorySummary, MemoryEvent, Message, SystemMetrics, AmpMessage, HermesStatus, MeshLogs, TrendingRepo, MeshInsight, RoutingSummary, PermissionAuditSummary, AgentMessage } from '../types'
+import { Agent, ServiceHealth, ServiceHistoryPoint, CronJob, MemoryEntry, MemorySummary, MemoryEvent, Message, SystemMetrics, AmpMessage, HermesStatus, MeshLogs, TrendingRepo, MeshInsight, RoutingSummary, PermissionAuditSummary, AgentMessage, SignalWatcherState, SecurityPosture } from '../types'
 
 interface DashboardState {
   // Connection
@@ -43,6 +43,10 @@ interface DashboardState {
   brief: string | null
   briefGeneratedAt: string | null
 
+  // Signal Watcher + Security Posture
+  signalWatcher: SignalWatcherState | null
+  securityPosture: SecurityPosture | null
+
   // Actions
   setAgents: (agents: Agent[]) => void
   setServices: (services: Record<string, ServiceHealth>) => void
@@ -71,6 +75,8 @@ interface DashboardState {
   setTrendingRepos: (repos: TrendingRepo[]) => void
   addInsight: (insight: MeshInsight) => void
   setInsights: (insights: MeshInsight[]) => void
+  setSignalWatcher: (state: SignalWatcherState | null) => void
+  setSecurityPosture: (posture: SecurityPosture | null) => void
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
@@ -104,6 +110,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   brief: null,
   briefGeneratedAt: null,
+
+  signalWatcher: null,
+  securityPosture: null,
 
   setAgents: (agents) => set({ agents }),
   setServices: (services) => set({ services }),
@@ -144,4 +153,6 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   setTrendingRepos: (trendingRepos) => set({ trendingRepos }),
   addInsight: (insight) => set((state) => ({ insights: [insight, ...state.insights].slice(0, 20) })),
   setInsights: (insights) => set({ insights }),
+  setSignalWatcher: (signalWatcher) => set({ signalWatcher }),
+  setSecurityPosture: (securityPosture) => set({ securityPosture }),
 }))

@@ -424,6 +424,30 @@ export interface AgentMessage {
   files: string[]
 }
 
+export interface SignalWatcherState {
+  last_run?: string | null
+  next_run_at?: string | null
+  next_run_in_seconds?: number | null
+  findings_today: number
+  top_finding?: string | null
+  job_active: boolean
+}
+
+export interface SecurityServicePosture {
+  name: string
+  port: number
+  localhost_only: boolean
+}
+
+export interface SecurityPosture {
+  services: SecurityServicePosture[]
+  tailscale_up: boolean
+  xsearch_oauth: boolean
+  all_localhost_bound: boolean
+  score: number
+  max_score: number
+}
+
 export interface StatusUpdate {
   type: 'status_update'
   timestamp?: string
@@ -446,4 +470,6 @@ export interface StatusUpdate {
   trending_repos?: TrendingRepo[]
   insights?: MeshInsight[]
   agent_messages?: AgentMessage[]
+  signal_watcher?: SignalWatcherState
+  security_posture?: SecurityPosture
 }

@@ -169,6 +169,8 @@ _state: dict[str, Any] = {
     "routing_summary": {},
     "permission_audit_summary": {},
     "agent_messages": [],
+    "signal_watcher": {},
+    "security_posture": {},
 }
 
 _trending_cache_time: float = 0.0
@@ -2569,6 +2571,10 @@ async def _poll_loop():
                 _state["memory_monitor_log"] = memory_monitor_log
                 _state["trending_repos"] = trending_repos
                 _state["permission_audit_summary"] = _refresh_permission_audit_summary()
+                _state["signal_watcher"] = _compute_signal_watcher_state(cron_jobs, memories)
+                _state["security_posture"] = await asyncio.get_event_loop().run_in_executor(
+                    None, _compute_security_posture_state
+                )
                 _state["last_updated"] = _now_iso()
 
                 await _broadcast_status()
@@ -2590,6 +2596,70 @@ async def _broadcast_insight(insight: dict):
             except Exception:
                 dead.add(ws)
         _ws_clients.difference_update(dead)
+
+
+def _compute_signal_watcher_state(jobs: list, memories: list) -> dict:
+    sw_job = next((j for j in jobs if "signal" in j.get("skill", "").lower() or "signal" in j.get("description", "").lower()), None)
+    last_run: str | None = None
+    next_run_at: str | None = None
+    next_run_in_seconds: int | None = None
+    if sw_job:
+        last_run = sw_job.get("last_run")
+        next_run_at = sw_job.get("next_run_at")
+        next_run_in_seconds = _seconds_until(next_run_at)
+    findings_today = 0
+    top_finding: str | None = None
+    today = datetime.now(timezone.utc).date().isoformat()
+    for mem in memories:
+        body = mem.get("body", "") or mem.get("content", "") or ""
+        if "AI SIGNAL" in body and today in body:
+            findings_today += 1
+            if top_finding is None:
+                top_finding = body[:200]
+    return {
+        "last_run": last_run,
+        "next_run_at": next_run_at,
+        "next_run_in_seconds": next_run_in_seconds,
+        "findings_today": findings_today,
+        "top_finding": top_finding,
+        "job_active": sw_job is not None,
+    }
+
+
+def _compute_security_posture_state() -> dict:
+    port_results = [_port_is_localhost_only(port) for _, port in _MESH_PORTS]
+    services_posture = [
+        {"name": name, "port": port, "localhost_only": ok}
+        for (name, port), ok in zip(_MESH_PORTS, port_results)
+    ]
+    tailscale_up = False
+    try:
+        ts = subprocess.run(
+            ["/Applications/Tailscale.app/Contents/MacOS/Tailscale", "status", "--json"],
+            capture_output=True, text=True, timeout=5,
+        )
+        ts_data = json.loads(ts.stdout)
+        tailscale_up = ts_data.get("BackendState") == "Running"
+    except Exception:
+        pass
+    xsearch_ok = False
+    try:
+        r = subprocess.run(
+            ["hermes", "toolset", "status", "x_search"],
+            capture_output=True, text=True, timeout=5,
+        )
+        xsearch_ok = "available" in r.stdout.lower() or r.returncode == 0
+    except Exception:
+        pass
+    all_local = all(s["localhost_only"] for s in services_posture)
+    return {
+        "services": services_posture,
+        "tailscale_up": tailscale_up,
+        "xsearch_oauth": xsearch_ok,
+        "all_localhost_bound": all_local,
+        "score": sum([all_local, tailscale_up, xsearch_ok]),
+        "max_score": 3,
+    }
 
 
 async def _broadcast_status():
@@ -2614,6 +2684,8 @@ async def _broadcast_status():
         "routing_summary": _state["routing_summary"],
         "permission_audit_summary": _state["permission_audit_summary"],
         "agent_messages": _state["agent_messages"],
+        "signal_watcher": _state["signal_watcher"],
+        "security_posture": _state["security_posture"],
     }
     data = json.dumps(payload)
     async with _ws_lock:
@@ -4211,6 +4283,64 @@ async def api_tts(req: TTSRequest):
                 yield chunk["data"]
 
     return StreamingResponse(audio_stream(), media_type="audio/mpeg")
+
+
+# ---------------------------------------------------------------------------
+# Signal Watcher
+# ---------------------------------------------------------------------------
+
+@app.get("/api/signal-watcher")
+async def api_signal_watcher():
+    """Returns AI Signal Watcher status: next run, last run, and top finding from memory."""
+    cached = _state.get("signal_watcher")
+    if cached:
+        return cached
+    return _compute_signal_watcher_state(_state.get("cron_jobs", []), _state.get("memories", []))
+
+
+# ---------------------------------------------------------------------------
+# Security Posture
+# ---------------------------------------------------------------------------
+
+_MESH_PORTS = [
+    ("openviking", 1933),
+    ("memory_mcp", 2033),
+    ("hermes", 18789),
+    ("mlx_35b", 8081),
+    ("mlx_7b", 8083),
+    ("ai_maestro", 23000),
+]
+
+
+def _port_is_localhost_only(port: int) -> bool:
+    """Return True if the port is only bound to 127.0.0.1 (not 0.0.0.0 or ::)."""
+    try:
+        result = subprocess.run(
+            ["lsof", "-iTCP", f":{port}", "-sTCP:LISTEN", "-n", "-P"],
+            capture_output=True, text=True, timeout=5,
+        )
+        lines = result.stdout.strip().splitlines()
+        for line in lines[1:]:  # skip header
+            parts = line.split()
+            if len(parts) < 9:
+                continue
+            addr = parts[8]
+            host = addr.rsplit(":", 1)[0].strip("[]")
+            if host not in ("127.0.0.1", "::1", "localhost"):
+                return False
+        return len(lines) > 1
+    except Exception:
+        return False
+
+
+@app.get("/api/security-posture")
+async def api_security_posture():
+    """Returns localhost-binding status for each mesh service plus Tailscale and x_search OAuth."""
+    cached = _state.get("security_posture")
+    if cached:
+        return cached
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _compute_security_posture_state)
 
 
 # ---------------------------------------------------------------------------
