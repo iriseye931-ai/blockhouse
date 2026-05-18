@@ -37,6 +37,13 @@ const AGENT_LABELS: Record<string, string> = {
   claude: 'Claude',
 }
 
+const AGENT_ROLES: Record<string, string> = {
+  atlas: 'Lead',
+  hermes: 'Automation',
+  iriseye: 'Operator',
+  claude: 'Cloud',
+}
+
 const WATCH_AGENTS = ['atlas', 'hermes', 'iriseye', 'claude'] as const
 
 type Vec3 = { x: number; y: number; z: number }
@@ -853,6 +860,7 @@ export default function MeshGraph({
         kind: 'agent' | 'service'
         active: boolean
         status: string
+        activityStatus: string | null
       }> = []
 
       for (const [key, point] of Object.entries(SERVICE_POINTS)) {
@@ -873,6 +881,7 @@ export default function MeshGraph({
           kind: 'service',
           active: status === 'up' || status === 'healthy',
           status,
+          activityStatus: null,
         })
       }
 
@@ -881,14 +890,20 @@ export default function MeshGraph({
         const pr = project(rotated, cx, cy, liveRadius)
         const agent = agentLookup[key]
         const status = agent?.presence?.status ?? agent?.status ?? 'offline'
+        const activityStatus = agent?.activity_status ?? null
+        const isLive = activityStatus === 'live'
+        const isIdleOrGone = activityStatus === 'idle' || activityStatus === 'stale' || !agent
+        const baseRadius = key === 'atlas' ? 24 : 20
+        const radiusMult = isLive ? 1.22 : isIdleOrGone ? 0.88 : 1.0
         projected.push({
-          node: { type: 'agent', key, label: AGENT_LABELS[key] ?? key, x: pr.x, y: pr.y, radius: (key === 'atlas' ? 24 : 20) + pr.scale * 8 },
+          node: { type: 'agent', key, label: AGENT_LABELS[key] ?? key, x: pr.x, y: pr.y, radius: baseRadius * radiusMult + pr.scale * 8 },
           z: pr.z,
           scale: pr.scale,
           color: AGENT_COLORS[key] ?? '#f1f1f1',
           kind: 'agent',
           active: ['online', 'active', 'busy', 'registered'].includes(status),
           status,
+          activityStatus,
         })
       }
 
@@ -970,14 +985,17 @@ export default function MeshGraph({
         const sig = agentSignature(item.node.key)
         const statusRaw = (item.status || '').toLowerCase()
         const isDegradedNode = statusRaw.includes('degraded') || statusRaw.includes('partial')
-        const isOfflineNode = !item.active && !isDegradedNode
-        const statusCadence = isOfflineNode ? 0.22 : isDegradedNode ? 1.9 : sig.cadence
+        const isLiveNode = item.activityStatus === 'live' || (item.activityStatus == null && item.active)
+        const isRecentNode = item.activityStatus === 'recent'
+        const isIdleNode = item.activityStatus === 'idle' || item.activityStatus === 'stale'
+        const isOfflineNode = !isLiveNode && !isRecentNode && !isDegradedNode
+        const statusCadence = isOfflineNode ? 0.22 : isDegradedNode ? 1.9 : isRecentNode ? sig.cadence * 0.45 : sig.cadence
         const pulse = 0.5 + 0.5 * Math.sin(t * 2.4 * statusCadence + item.node.key.length)
         const orbitPhase = t * (item.node.key === 'atlas' ? 0.95 : 1.25) * statusCadence + item.node.key.length * 0.7
         const orbitRadius = item.node.radius + 10 + pulse * 3 * sig.orbitA
         const orbitRadiusB = item.node.radius + 15 + pulse * 2.5 * sig.orbitB
         const jitter = isDegradedNode ? Math.sin(t * 8 + item.node.key.length * 0.9) * 1.4 : 0
-        if (item.active) {
+        if (isLiveNode) {
           const halo = ctx.createRadialGradient(item.node.x, item.node.y, item.node.radius * 0.2, item.node.x, item.node.y, item.node.radius * 1.8)
           halo.addColorStop(0, `rgba(${hexToRgb(item.color)},${sig.halo})`)
           halo.addColorStop(0.55, `rgba(${hexToRgb(item.color)},0.08)`)
@@ -1025,6 +1043,30 @@ export default function MeshGraph({
           ctx.beginPath()
           ctx.arc(orbiterX2, orbiterY2, 1.2, 0, Math.PI * 2)
           ctx.fill()
+        } else if (isRecentNode) {
+          // Amber halo — half the radius of active, much softer
+          const recentHalo = ctx.createRadialGradient(item.node.x, item.node.y, item.node.radius * 0.25, item.node.x, item.node.y, item.node.radius * 1.45)
+          recentHalo.addColorStop(0, 'rgba(240,192,64,0.09)')
+          recentHalo.addColorStop(0.6, 'rgba(240,192,64,0.04)')
+          recentHalo.addColorStop(1, 'rgba(0,0,0,0)')
+          ctx.fillStyle = recentHalo
+          ctx.beginPath()
+          ctx.arc(item.node.x, item.node.y, item.node.radius * 1.45, 0, Math.PI * 2)
+          ctx.fill()
+
+          // Single slow orbit arc — no orbiter dot
+          ctx.beginPath()
+          ctx.arc(item.node.x, item.node.y, orbitRadius, orbitPhase, orbitPhase + Math.PI * 0.68)
+          ctx.strokeStyle = 'rgba(240,192,64,0.20)'
+          ctx.lineWidth = 0.8
+          ctx.stroke()
+
+          // Gentle pulse ring
+          ctx.beginPath()
+          ctx.arc(item.node.x, item.node.y, item.node.radius + 3 + pulse * 2.5, 0, Math.PI * 2)
+          ctx.strokeStyle = `rgba(240,192,64,${0.03 + pulse * 0.05})`
+          ctx.lineWidth = 0.9
+          ctx.stroke()
         } else if (isDegradedNode) {
           ctx.beginPath()
           ctx.arc(item.node.x + jitter, item.node.y - jitter * 0.4, item.node.radius + 5 + pulse * 2, 0, Math.PI * 2)
@@ -1043,10 +1085,14 @@ export default function MeshGraph({
           item.node.y,
           item.node.radius,
         )
-        if (item.active) {
+        if (isLiveNode) {
           nodeFill.addColorStop(0, 'rgba(242,252,255,0.16)')
           nodeFill.addColorStop(0.28, `rgba(${hexToRgb(item.color)},0.14)`)
           nodeFill.addColorStop(1, 'rgba(4,10,18,0.26)')
+        } else if (isRecentNode) {
+          nodeFill.addColorStop(0, 'rgba(255,210,120,0.07)')
+          nodeFill.addColorStop(0.3, 'rgba(240,192,64,0.06)')
+          nodeFill.addColorStop(1, 'rgba(4,10,18,0.20)')
         } else {
           nodeFill.addColorStop(0, 'rgba(180,196,208,0.06)')
           nodeFill.addColorStop(0.3, 'rgba(78,96,112,0.08)')
@@ -1058,11 +1104,13 @@ export default function MeshGraph({
         ctx.fill()
         ctx.strokeStyle = focused
           ? `rgba(${hexToRgb(item.color)},0.9)`
-          : `rgba(${hexToRgb(item.color)},${item.active ? 0.22 : 0.06})`
+          : isLiveNode ? `rgba(${hexToRgb(item.color)},0.22)`
+          : isRecentNode ? 'rgba(240,192,64,0.20)'
+          : `rgba(${hexToRgb(item.color)},0.06)`
         ctx.lineWidth = 1
         ctx.stroke()
 
-        if (item.active) {
+        if (isLiveNode) {
           const coreHighlight = ctx.createRadialGradient(item.node.x, item.node.y, 0, item.node.x, item.node.y, item.node.radius * 0.58)
           coreHighlight.addColorStop(0, 'rgba(255,255,255,0.34)')
           coreHighlight.addColorStop(0.35, `rgba(${hexToRgb(item.color)},0.16)`)
@@ -1075,10 +1123,10 @@ export default function MeshGraph({
 
         ctx.beginPath()
         ctx.arc(item.node.x, item.node.y, item.node.radius * 0.4, 0, Math.PI * 2)
-        ctx.strokeStyle = `rgba(${hexToRgb(item.color)},${item.active ? 0.4 : 0.12})`
+        ctx.strokeStyle = `rgba(${hexToRgb(item.color)},${isLiveNode ? 0.4 : isRecentNode ? 0.16 : 0.12})`
         ctx.lineWidth = 1
         ctx.stroke()
-        ctx.strokeStyle = `rgba(${hexToRgb(item.color)},${item.active ? 0.28 : isDegradedNode ? 0.12 : 0.05})`
+        ctx.strokeStyle = `rgba(${hexToRgb(item.color)},${isLiveNode ? 0.28 : isRecentNode ? 0.14 : isDegradedNode ? 0.12 : 0.05})`
         if (sig.shell === 'command') {
           ctx.beginPath()
           ctx.moveTo(item.node.x - item.node.radius * 0.55, item.node.y)
@@ -1147,6 +1195,29 @@ export default function MeshGraph({
           ctx.font = `${Math.max(7, 7.4 * item.scale)}px sans-serif`
           ctx.fillStyle = '#f2f2f2'
           ctx.fillText(item.node.label.toUpperCase(), item.node.x, item.node.y + item.node.radius + 17)
+        } else {
+          // Always-visible name label, color encodes activity state
+          const nameOpacity = isLiveNode ? 0.72 : isRecentNode ? 0.62 : isIdleNode ? 0.30 : 0.16
+          const nameColor = isRecentNode
+            ? `rgba(240,192,64,${nameOpacity})`
+            : `rgba(${hexToRgb(item.color)},${nameOpacity})`
+          const labelY = item.node.y + item.node.radius + Math.max(11, 13 * item.scale)
+          ctx.textAlign = 'center'
+          ctx.font = `${Math.max(6.5, 7.5 * item.scale)}px monospace`
+          ctx.fillStyle = nameColor
+          ctx.fillText(item.node.label.toUpperCase(), item.node.x, labelY)
+          // Activity dot below name for live/recent agents
+          if (isLiveNode || isRecentNode) {
+            const dotColor = isLiveNode ? STATUS_COLORS.green : STATUS_COLORS.amber
+            const dotY = labelY + Math.max(7, 8 * item.scale)
+            const dotR = Math.max(1.8, 2.2 * item.scale)
+            if (isLiveNode) { ctx.shadowColor = STATUS_COLORS.green; ctx.shadowBlur = 5 }
+            ctx.fillStyle = dotColor
+            ctx.beginPath()
+            ctx.arc(item.node.x, dotY, dotR, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.shadowBlur = 0
+          }
         }
       })
 
@@ -1337,18 +1408,11 @@ export default function MeshGraph({
               const accentRgb = hexToRgb(accent)
               const statusRaw = (agent?.health_status ?? agent?.presence?.status ?? agent?.status ?? 'offline').toLowerCase()
               const isUp = ['online','active','busy','registered'].some(k => statusRaw.includes(k))
-              const isDegraded = ['degraded','partial'].some(k => statusRaw.includes(k))
-              const statusColor = isUp ? STATUS_COLORS.green : isDegraded ? STATUS_COLORS.amber : STATUS_COLORS.red
-              const statusLabel = isUp ? 'ONLINE' : isDegraded ? 'DEGRADED' : statusRaw ? statusRaw.toUpperCase() : 'OFFLINE'
               const modelLabel = agent?.model?.split('/').pop()?.slice(0, 18) ?? '—'
-              const taskSummary = agent?.task?.slice(0, 72) ?? null
               const hermesNativeProfiles = (agent?.local_profiles ?? []).filter((profile) => profile.profile_kind === 'hermes-native')
               const hermesRunningProfiles = hermesNativeProfiles.filter((profile) => profile.running).length
               const hermesProfileSummary = hermesNativeProfiles.length > 0
                 ? `${hermesRunningProfiles}/${hermesNativeProfiles.length}`
-                : null
-              const hermesSessionCount = agentKey === 'hermes'
-                ? hermesNativeProfiles.reduce((sum, profile) => sum + (profile.session_overview?.session_count ?? 0), 0)
                 : null
               const hermesLatestTitle = agentKey === 'hermes'
                 ? hermesNativeProfiles.find((profile) => profile.session_overview?.latest_title)?.session_overview?.latest_title
@@ -1356,33 +1420,25 @@ export default function MeshGraph({
               const hermesBackgroundCount = agentKey === 'hermes'
                 ? ((hermesStatus?.background_tasks ?? []).filter((task) => task.running).length)
                 : null
-              const hermesWorktreeTask = agentKey === 'hermes'
-                ? (hermesStatus?.background_tasks ?? []).find((task) => task.mode === 'worktree' && task.worktree_branch)
-                : null
-              const hermesCheckpointReady = agentKey === 'hermes'
-                ? hermesNativeProfiles.filter((profile) => profile.checkpoint_overview?.rollback_ready).length
-                : null
-              const hermesCheckpointSnapshots = agentKey === 'hermes'
-                ? Math.max(0, ...hermesNativeProfiles.map((profile) => profile.checkpoint_overview?.snapshot_count ?? 0))
-                : null
-              const hermesFallbackProfiles = agentKey === 'hermes'
-                ? hermesNativeProfiles.filter((profile) => (profile.provider_overview?.fallback_count ?? 0) > 0).length
-                : null
-              const hermesSmartProfiles = agentKey === 'hermes'
-                ? hermesNativeProfiles.filter((profile) => profile.provider_overview?.smart_routing_enabled).length
-                : null
-              const hermesToolsetProfiles = agentKey === 'hermes'
-                ? hermesNativeProfiles.filter((profile) => (profile.toolset_overview?.toolset_count ?? 0) > 0).length
-                : null
-              const hermesSharedSkillProfiles = agentKey === 'hermes'
-                ? hermesNativeProfiles.filter((profile) => profile.skill_overview?.shared_skills_connected).length
-                : null
-              const hermesMemoryProfiles = agentKey === 'hermes'
-                ? hermesNativeProfiles.filter((profile) => profile.memory_overview?.memory_enabled).length
-                : null
-              const hermesExternalMemoryProfiles = agentKey === 'hermes'
-                ? hermesNativeProfiles.filter((profile) => profile.memory_overview?.external_provider_active || profile.memory_overview?.external_provider_available).length
-                : null
+
+              const activityStatus = agent?.activity_status ?? null
+              const activityLabel = !agent ? 'OFFLINE'
+                : activityStatus === 'live' ? 'ACTIVE'
+                : activityStatus === 'recent' ? 'RECENT'
+                : activityStatus === 'idle' || activityStatus === 'stale' ? 'IDLE'
+                : isUp ? 'ONLINE' : 'OFFLINE'
+              const activityColor = activityLabel === 'ACTIVE' ? STATUS_COLORS.green
+                : activityLabel === 'RECENT' ? STATUS_COLORS.amber
+                : activityLabel === 'IDLE' || activityLabel === 'ONLINE' ? 'rgba(140,110,200,0.7)'
+                : STATUS_COLORS.red
+              const contextLine: string = (() => {
+                if (agent?.task) return agent.task.slice(0, 60)
+                if (agentKey === 'hermes' && hermesBackgroundCount != null && hermesBackgroundCount > 0) {
+                  return `${hermesBackgroundCount} ${hermesBackgroundCount === 1 ? 'task' : 'tasks'} in background`
+                }
+                if (agentKey === 'hermes' && hermesLatestTitle) return hermesLatestTitle.slice(0, 60)
+                return 'standby'
+              })()
 
               return (
                 <div
@@ -1410,121 +1466,58 @@ export default function MeshGraph({
                       }}
                     />
                   )}
-                  <div style={{ height: 1, background: isFocused ? `linear-gradient(90deg, rgba(${accentRgb},1), rgba(${accentRgb},0.18))` : `linear-gradient(90deg, rgba(${accentRgb},0.35), rgba(${accentRgb},0.05))`, marginBottom: 12 }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, color: isFocused ? accent : '#dffbff', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, textShadow: isFocused ? `0 0 16px rgba(${accentRgb},0.3)` : 'none', minWidth: 0, flex: 1, lineHeight: 1.1 }}>
-                      {AGENT_LABELS[agentKey] ?? agentKey}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, boxShadow: `0 0 6px ${statusColor}` }} />
-                      <span style={{ fontSize: 10, color: statusColor, letterSpacing: '0.12em', whiteSpace: 'nowrap' }}>{statusLabel}</span>
+                  <div style={{ height: 1, background: isFocused ? `linear-gradient(90deg, rgba(${accentRgb},1), rgba(${accentRgb},0.18))` : `linear-gradient(90deg, rgba(${accentRgb},0.35), rgba(${accentRgb},0.05))`, marginBottom: 10 }} />
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                    <span style={{ fontSize: 9, color: 'rgba(180,140,255,0.45)', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                      {AGENT_ROLES[agentKey] ?? agentKey}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: activityColor, boxShadow: activityLabel === 'ACTIVE' ? `0 0 6px ${activityColor}` : 'none' }} />
+                      <span style={{ fontSize: 9, color: activityColor, letterSpacing: '0.12em' }}>{activityLabel}</span>
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 10, display: 'grid', gap: 7 }}>
-                    <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                      <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Model</span>
-                      <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>{modelLabel}</span>
-                    </div>
-                    <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                      <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Presence</span>
-                      <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>{agent?.presence?.status ?? agent?.status ?? 'offline'}</span>
-                    </div>
-                    {agent?.runtime_status && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Runtime</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>{agent.runtime_status}</span>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && hermesProfileSummary && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Profiles</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {hermesProfileSummary} active
-                        </span>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && hermesSessionCount != null && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Sessions</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {hermesSessionCount} tracked
-                        </span>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && hermesBackgroundCount != null && hermesBackgroundCount > 0 && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Background</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {hermesBackgroundCount} running
-                        </span>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && hermesCheckpointReady != null && hermesCheckpointReady > 0 && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Rollback</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {hermesCheckpointReady}/{hermesNativeProfiles.length} ready · {hermesCheckpointSnapshots} snaps
-                        </span>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && (hermesFallbackProfiles != null || hermesSmartProfiles != null) && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Providers</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {hermesFallbackProfiles ?? 0} fallback · {hermesSmartProfiles ?? 0} smart
-                        </span>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && hermesToolsetProfiles != null && hermesToolsetProfiles > 0 && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Toolsets</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {hermesToolsetProfiles}/{hermesNativeProfiles.length} mapped
-                        </span>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && hermesSharedSkillProfiles != null && hermesSharedSkillProfiles > 0 && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Skills</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {hermesSharedSkillProfiles}/{hermesNativeProfiles.length} shared
-                        </span>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && hermesMemoryProfiles != null && hermesMemoryProfiles > 0 && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Memory</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {hermesMemoryProfiles}/{hermesNativeProfiles.length} local · {hermesExternalMemoryProfiles ?? 0} ext
-                        </span>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && hermesWorktreeTask?.worktree_branch && (
-                      <div style={{ display:'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
-                        <span style={{ fontSize: 9, color: 'rgba(150,200,220,0.44)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Branch</span>
-                        <span style={{ fontSize: 12, color: isFocused ? '#effcff' : '#c8eaf8', textAlign: 'right', minWidth: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                          {hermesWorktreeTask.worktree_branch}
-                        </span>
-                      </div>
-                    )}
-                    {taskSummary && (
-                      <div style={{ marginTop: 5, padding: '10px 11px', border: isFocused ? `1px solid rgba(${accentRgb},0.16)` : '1px solid rgba(100,210,255,0.1)', background: isFocused ? `rgba(${accentRgb},0.05)` : 'rgba(255,255,255,0.025)' }}>
-                        <div style={{ fontSize: 9, color: isFocused ? accent : 'rgba(150,220,255,0.5)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6 }}>
-                          Current Task
-                        </div>
-                        <div style={{ fontSize: 12, color: isFocused ? '#f2fbff' : 'rgba(202,234,245,0.82)', lineHeight: 1.55 }}>{taskSummary}</div>
-                      </div>
-                    )}
-                    {agentKey === 'hermes' && hermesLatestTitle && !taskSummary && (
-                      <div style={{ marginTop: 5, padding: '10px 11px', border: isFocused ? `1px solid rgba(${accentRgb},0.16)` : '1px solid rgba(100,210,255,0.1)', background: isFocused ? `rgba(${accentRgb},0.05)` : 'rgba(255,255,255,0.025)' }}>
-                        <div style={{ fontSize: 9, color: isFocused ? accent : 'rgba(150,220,255,0.5)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6 }}>
-                          Latest Session
-                        </div>
-                        <div style={{ fontSize: 12, color: isFocused ? '#f2fbff' : 'rgba(202,234,245,0.82)', lineHeight: 1.55 }}>{hermesLatestTitle}</div>
-                      </div>
-                    )}
+                  <div style={{ fontSize: 16, color: accent, fontWeight: 700, letterSpacing: '0.06em', lineHeight: 1.1, marginBottom: 6, textShadow: isFocused ? `0 0 20px rgba(${accentRgb},0.4)` : 'none' }}>
+                    {AGENT_LABELS[agentKey] ?? agentKey}
                   </div>
+
+                  <div style={{ fontSize: 11, color: isFocused ? 'rgba(220,200,255,0.7)' : 'rgba(160,130,210,0.55)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {contextLine}
+                  </div>
+
+                  {isFocused && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ height: 1, background: `rgba(${accentRgb},0.15)`, marginBottom: 10 }} />
+                      {modelLabel !== '—' && (
+                        <div style={{ marginBottom: 8 }}>
+                          <span style={{ fontSize: 9, color: 'rgba(180,160,220,0.65)', background: 'rgba(160,100,255,0.08)', padding: '3px 8px', border: '1px solid rgba(160,100,255,0.16)', letterSpacing: '0.1em', borderRadius: 2 }}>
+                            {modelLabel}
+                          </span>
+                        </div>
+                      )}
+                      {agentKey === 'hermes' && hermesBackgroundCount != null && hermesBackgroundCount > 0 && (
+                        <div style={{ fontSize: 11, color: 'rgba(200,180,255,0.75)', marginBottom: 4 }}>
+                          {hermesBackgroundCount} background {hermesBackgroundCount === 1 ? 'task' : 'tasks'} running
+                        </div>
+                      )}
+                      {agentKey === 'hermes' && hermesProfileSummary && (
+                        <div style={{ fontSize: 11, color: 'rgba(180,160,220,0.6)', marginBottom: 4 }}>
+                          {hermesProfileSummary} profiles active
+                        </div>
+                      )}
+                      {agent?.task && agent.task.length > 60 && (
+                        <div style={{ fontSize: 11, color: '#f2fbff', lineHeight: 1.55, marginTop: 6 }}>
+                          {agent.task.slice(0, 120)}
+                        </div>
+                      )}
+                      {agentKey === 'hermes' && hermesLatestTitle && !agent?.task && (
+                        <div style={{ fontSize: 11, color: '#f2fbff', lineHeight: 1.55, marginTop: 6 }}>
+                          {hermesLatestTitle}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
