@@ -1169,9 +1169,6 @@ function HermesTab({
                 <div style={{ padding: '0 10px 10px' }}>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 5 }}>
                     <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
-                      maestro: <span style={{ color: '#9485a8' }}>{agent.registration_status === 'registered' ? (agent.orchestration_status ?? 'unknown') : 'not registered'}</span>
-                    </span>
-                    <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>
                       activity: <span style={{ color: agent.activity_status === 'live' ? '#10b981' : agent.activity_status === 'recent' ? '#8a50e0' : agent.activity_status === 'idle' ? '#f59e0b' : agent.activity_status === 'stale' ? '#ef4444' : '#9485a8' }}>{agent.activity_status ?? 'unknown'}</span>
                     </span>
                     <span style={{ fontSize: 8, color: '#5e4a78', fontFamily: 'monospace' }}>

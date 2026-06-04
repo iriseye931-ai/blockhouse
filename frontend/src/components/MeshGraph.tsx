@@ -18,7 +18,7 @@ const SERVICE_COLORS: Record<string, string> = {
   memory_mcp: '#e5d8ff',
   openclaw_mcp: '#d8c8ff',
   ollama: '#dcd0ff',
-  aimaestro: '#ede0ff',
+  screenpipe: '#d0f0e8',
 }
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -27,7 +27,7 @@ const SERVICE_LABELS: Record<string, string> = {
   memory_mcp: 'Memory',
   openclaw_mcp: 'Automation',
   ollama: 'Models',
-  aimaestro: 'Orchestration',
+  screenpipe: 'Capture',
 }
 
 const AGENT_LABELS: Record<string, string> = {
@@ -73,7 +73,7 @@ const SERVICE_POINTS: Record<string, Vec3> = {
   openclaw_mcp: { x: 0.54, y: -0.52, z: 0.28 },
   ollama: { x: -0.04, y: -0.76, z: 0.22 },
   memory_mcp: { x: -0.76, y: -0.18, z: 0.26 },
-  aimaestro: { x: -0.56, y: 0.42, z: 0.18 },
+  screenpipe: { x: -0.56, y: 0.42, z: 0.18 },
 }
 
 const STAR_POINTS: Vec3[] = Array.from({ length: 600 }, (_, index) => {
@@ -106,17 +106,18 @@ const POLY_LINES: Array<[Vec3, Vec3]> = [
   [SERVICE_POINTS.memory_mcp, AGENT_POINTS.atlas],
   [SERVICE_POINTS.openclaw_mcp, AGENT_POINTS.hermes],
   [SERVICE_POINTS.ollama, AGENT_POINTS.hermes],
-  [SERVICE_POINTS.aimaestro, AGENT_POINTS.iriseye],
+  [SERVICE_POINTS.screenpipe, AGENT_POINTS.atlas],
+  [SERVICE_POINTS.screenpipe, AGENT_POINTS.hermes],
   [SERVICE_POINTS.memory_mcp, AGENT_POINTS.iriseye],
   [SERVICE_POINTS.openviking, SERVICE_POINTS.mlx_server],
   [SERVICE_POINTS.mlx_server, SERVICE_POINTS.openclaw_mcp],
   [SERVICE_POINTS.openclaw_mcp, SERVICE_POINTS.ollama],
   [SERVICE_POINTS.ollama, SERVICE_POINTS.memory_mcp],
-  [SERVICE_POINTS.memory_mcp, SERVICE_POINTS.aimaestro],
-  [SERVICE_POINTS.aimaestro, SERVICE_POINTS.openviking],
+  [SERVICE_POINTS.memory_mcp, SERVICE_POINTS.screenpipe],
+  [SERVICE_POINTS.screenpipe, SERVICE_POINTS.openviking],
   // Additional cross-connections for richer lattice
   [SERVICE_POINTS.openviking, SERVICE_POINTS.openclaw_mcp],
-  [SERVICE_POINTS.mlx_server, SERVICE_POINTS.aimaestro],
+  [SERVICE_POINTS.mlx_server, SERVICE_POINTS.screenpipe],
   [SERVICE_POINTS.mlx_server, SERVICE_POINTS.memory_mcp],
   [SERVICE_POINTS.ollama, SERVICE_POINTS.openviking],
   [AGENT_POINTS.hermes, AGENT_POINTS.iriseye],

@@ -309,7 +309,7 @@ function OpsStrip({ onSelect }: { onSelect: (selection: GraphSelection) => void 
     ['Memory', 'memory_mcp', services.memory_mcp?.status],
     ['MLX', 'mlx_server', services.mlx_server?.status],
     ['OpenClaw', 'openclaw_mcp', services.openclaw_mcp?.status],
-    ['AMP', 'aimaestro', services.aimaestro?.status],
+    ['Screenpipe', 'screenpipe', services.screenpipe?.status],
   ] as const satisfies ReadonlyArray<readonly [string, string, string | undefined]>
 
   const historyKeys: Record<string, string> = {
@@ -317,7 +317,7 @@ function OpsStrip({ onSelect }: { onSelect: (selection: GraphSelection) => void 
     Memory: 'memory_mcp',
     MLX: 'mlx_server',
     OpenClaw: 'openclaw_mcp',
-    AMP: 'aimaestro',
+    Screenpipe: 'screenpipe',
   }
 
   const toneFor = (status?: string) =>
@@ -477,7 +477,7 @@ function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) =
   const summaryItems: Array<[string, string, GraphSelection]> = [
     ['Next cron', nextJob ? `${nextJob.name.slice(0, 12)} · ${fmtIn(nextJob.next_run_in_seconds)}` : 'idle', { type: 'agent', key: 'hermes', label: 'Hermes' }],
     ['Audit', `${denyCount} deny · ${askCount} ask`, { type: 'agent', key: 'atlas', label: 'Lead' }],
-    ['Queue', `${agentMessages.length} msgs`, { type: 'service', key: 'aimaestro', label: 'AMP' }],
+    ['Queue', `${agentMessages.length} msgs`, { type: 'service', key: 'screenpipe', label: 'Screenpipe' }],
     ['Memory', `${memoryAlerts} alerts`, { type: 'service', key: 'memory_mcp', label: 'Memory' }],
   ]
 

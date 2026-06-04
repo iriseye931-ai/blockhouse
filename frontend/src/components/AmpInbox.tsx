@@ -362,7 +362,7 @@ export default function AmpInbox() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           {loading && <p style={{ fontSize: 10, color: '#334155', padding: 4 }}>Loading…</p>}
           {!loading && error && <p style={{ fontSize: 10, color: '#ef4444', fontFamily: 'monospace', padding: 4 }}>{error}</p>}
-          {!loading && !error && messages.length === 0 && <p style={{ fontSize: 10, color: '#334155', padding: 4 }}>No messages from AI Maestro.</p>}
+          {!loading && !error && messages.length === 0 && <p style={{ fontSize: 10, color: '#334155', padding: 4 }}>No messages in inbox.</p>}
           {messages.map((msg) => (
             <div key={msg.id || msg.timestamp} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 4, padding: '6px 8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
