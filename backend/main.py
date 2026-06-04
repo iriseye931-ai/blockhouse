@@ -57,8 +57,7 @@ HERMES_HOME = Path.home() / ".hermes"
 HERMES_PROFILES_DIR = HERMES_HOME / "profiles"
 LOCAL_BIN_DIR = Path.home() / ".local" / "bin"
 HERMES_BIN = Path(shutil.which("hermes") or "/Users/iris/.local/bin/hermes")
-AIMAESTRO_AGENTS_DIR = Path.home() / ".aimaestro" / "agents"
-AIMAESTRO_REGISTRY_PATH = AIMAESTRO_AGENTS_DIR / "registry.json"
+SCREENPIPE_AGENTS_DIR = Path.home() / ".screenpipe"
 AVAILABILITY_OVERRIDES_PATH = Path.home() / ".mesh" / "availability_overrides.json"
 PERMISSION_AUDIT_LOG_PATH = Path.home() / ".mesh" / "permission_audit.jsonl"
 AGENT_INBOX_PATH = Path.home() / ".mesh" / "agent_inbox.jsonl"
@@ -69,9 +68,12 @@ MLX_VENV_BIN = Path.home() / ".mlx" / "venv" / "bin"
 MLX_SERVER_BIN = MLX_VENV_BIN / "mlx_lm.server"
 
 MLX_SERVER_URL = os.getenv("MLX_SERVER_URL", "http://127.0.0.1:8081")
+MLX_AUX_URL = os.getenv("MLX_AUX_URL", "http://127.0.0.1:8083")
 WHISPER_STT_URL = os.getenv("WHISPER_STT_URL", "http://127.0.0.1:8082")
 WHISPER_HEALTH = f"{WHISPER_STT_URL}/health"
 MLX_MODELS_URL = f"{MLX_SERVER_URL}/v1/models"
+MLX_AUX_MODELS_URL = f"{MLX_AUX_URL}/v1/models"
+SCREENPIPE_URL = os.getenv("SCREENPIPE_URL", "http://127.0.0.1:3030")
 
 CRON_JOBS_PATH = Path.home() / ".hermes" / "cron" / "jobs.json"
 HERMES_ENV_PATH = Path.home() / ".hermes" / ".env"
@@ -1608,20 +1610,33 @@ async def _fetch_service_health(client: httpx.AsyncClient) -> dict[str, Any]:
     except Exception as exc:
         services["whisper_stt"] = {"name": "Whisper STT", "status": "down", "error": str(exc)}
 
-    # AI Maestro (AMP routing hub) — no /health endpoint, use /api/agents
+    # MLX aux server (Qwen3.5 9B — summaries, routing, compression)
     try:
-        r = await client.get(f"{AI_MAESTRO_URL}/api/agents", timeout=HTTP_TIMEOUT)
+        r = await client.get(MLX_AUX_MODELS_URL, timeout=HTTP_TIMEOUT)
         body = r.json()
-        agents = body.get("agents", [])
-        services["aimaestro"] = {
-            "name": "AI Maestro",
-            "url": AI_MAESTRO_URL,
-            "status": "up" if "agents" in body else "degraded",
-            "agents": len(agents),
-            "online": sum(1 for agent in agents if agent.get("status") == "online"),
+        aux_models = [m["id"] for m in body.get("data", [])]
+        local_aux = [m for m in aux_models if m.startswith("/")]
+        active_aux = local_aux[0] if local_aux else (aux_models[0] if aux_models else "unknown")
+        services["mlx_aux"] = {
+            "name": "MLX 9B",
+            "url": MLX_AUX_MODELS_URL,
+            "status": "up",
+            "models": aux_models,
+            "active_model": active_aux,
+        }
+    except Exception:
+        services["mlx_aux"] = {"name": "MLX 9B", "status": "down"}
+
+    # Screenpipe (screen activity capture + MCP)
+    try:
+        r = await client.get(f"{SCREENPIPE_URL}/health", timeout=HTTP_TIMEOUT)
+        services["screenpipe"] = {
+            "name": "Screenpipe",
+            "url": SCREENPIPE_URL,
+            "status": "up",
         }
     except Exception as exc:
-        services["aimaestro"] = {"name": "AI Maestro", "status": "down", "error": str(exc)}
+        services["screenpipe"] = {"name": "Screenpipe", "status": "down", "error": str(exc)}
 
     return services
 
@@ -1659,33 +1674,17 @@ MESH_AGENTS = [
         "local_profiles": [
             {
                 "name": "workhorse",
-                "model": "/Users/iris/.mlx/models/Qwen3.5-35B-A3B-4bit",
-                "base_url": "http://192.168.1.186:8081/v1",
+                "model": "/Users/iris/.mlx/models/Qwen3.6-35B-A3B-OptiQ-4bit",
+                "base_url": "http://127.0.0.1:8081/v1",
                 "purpose": "default execution",
                 "mode": "active",
             },
             {
                 "name": "sidecar",
-                "model": "/Users/iris/.mlx/models/Qwen2.5-7B-Instruct-4bit",
-                "base_url": "http://192.168.1.186:8083/v1",
+                "model": "/Users/iris/.mlx/models/Qwen3.5-9B-OptiQ-4bit",
+                "base_url": "http://127.0.0.1:8083/v1",
                 "purpose": "summaries, routing, compression, auxiliary tasks",
                 "mode": "active",
-            },
-            {
-                "name": "code-specialist",
-                "model": "/Users/iris/.mlx/models/Qwen2.5-Coder-32B-Instruct-4bit",
-                "base_url": "http://127.0.0.1:8084/v1",
-                "purpose": "code-heavy implementation, patching, and local review",
-                "mode": "on-demand",
-                "managed": True,
-            },
-            {
-                "name": "reasoning-specialist",
-                "model": "/Users/iris/.mlx/models/DeepSeek-R1-Distill-Qwen-32B-4bit",
-                "base_url": "http://127.0.0.1:8085/v1",
-                "purpose": "harder local reasoning, debugging analysis, and second-pass review",
-                "mode": "on-demand",
-                "managed": True,
             },
         ],
         "detect": "hermes",  # pgrep pattern
@@ -1735,42 +1734,15 @@ async def _is_process_running(pattern: str) -> bool:
         return False
 
 
-async def _fetch_maestro_registry(client: httpx.AsyncClient) -> dict[str, dict[str, Any]]:
-    try:
-        r = await client.get(f"{AI_MAESTRO_URL}/api/agents", timeout=HTTP_TIMEOUT)
-        body = r.json()
-        agents = body.get("agents", [])
-        return {
-            str(agent.get("name", "")).strip().lower(): agent
-            for agent in agents
-            if agent.get("name")
-        }
-    except Exception:
-        return {}
-
-
 async def _fetch_agents(client: httpx.AsyncClient) -> list[dict[str, Any]]:
-    """Build mesh agent list from runtime detection plus AI Maestro registration data."""
-    maestro_agents = await _fetch_maestro_registry(client)
+    """Build mesh agent list from runtime detection."""
     defs_by_name = {agent["name"]: agent for agent in MESH_AGENTS}
-    all_names = list(dict.fromkeys([*defs_by_name.keys(), *maestro_agents.keys()]))
 
     agents = []
-    for key in all_names:
-        defn = defs_by_name.get(key, {
-            "id": key,
-            "name": key,
-            "label": key,
-            "role": "Registered Agent",
-            "model": None,
-            "color": "#64748b",
-            "detect": None,
-        })
-        maestro = maestro_agents.get(key)
-
+    for key, defn in defs_by_name.items():
         if key == "atlas":
             runtime_status = "online"
-            task = "Atlas lead role — served by Codex or Claude Code"
+            task = "Atlas lead role — Claude Code (Sonnet)"
         elif defn["detect"] and await _is_process_running(defn["detect"]):
             runtime_status = "online"
             task = None
@@ -1778,33 +1750,20 @@ async def _fetch_agents(client: httpx.AsyncClient) -> list[dict[str, Any]]:
             runtime_status = "offline"
             task = None
 
-        orchestration_status = maestro.get("status", "unknown") if maestro else "unregistered"
-        registration_status = "registered" if maestro else "local-only"
-        address = None
-        if maestro:
-            addresses = (((maestro.get("tools") or {}).get("amp") or {}).get("addresses")) or []
-            primary = next((item for item in addresses if item.get("primary")), addresses[0] if addresses else None)
-            if primary:
-                address = primary.get("address")
-
         agents.append({
             "id": defn["id"],
             "name": defn["name"],
             "label": defn["label"],
             "role": defn["role"],
-            "model": (maestro or {}).get("model") or defn["model"],
+            "model": defn["model"],
             "color": defn["color"],
             "status": runtime_status,
             "runtime_status": runtime_status,
-            "registration_status": registration_status,
-            "orchestration_status": orchestration_status,
             "health_status": "unknown",
             "status_reason": None,
-            "task": task or (maestro or {}).get("taskDescription"),
+            "task": task,
             "host": os.getenv("MESH_HOST", "localhost"),
-            "address": address,
-            "program": (maestro or {}).get("program"),
-            "last_active": (maestro or {}).get("lastActive"),
+            "address": f"{key}@teamirs.aimaestro.local",
             "tier": defn.get("tier"),
             "routing_group": defn.get("routing_group"),
             "scarce": defn.get("scarce", False),
@@ -1825,14 +1784,12 @@ def _finalize_agents(
     result: list[dict[str, Any]] = []
     defs_by_name = {entry["name"]: entry for entry in MESH_AGENTS}
     hermes_service = services.get("hermes_gateway", {})
-    maestro_service = services.get("aimaestro", {})
     availability_overrides = _availability_overrides()
 
     for agent in agents:
         enriched = dict(agent)
         name = str(agent.get("name", "")).lower()
         runtime_status = agent.get("runtime_status", agent.get("status", "offline"))
-        orchestration_status = agent.get("orchestration_status", "unknown")
         effective_last_active = last_active.get(name) or agent.get("last_active")
         activity_status, activity_age_seconds = _activity_summary(effective_last_active)
         override = availability_overrides.get(name, {}) if isinstance(availability_overrides.get(name), dict) else {}
@@ -1855,10 +1812,6 @@ def _finalize_agents(
         elif runtime_status == "online":
             health_status = "healthy"
             status_reason = "Local runtime detected"
-        elif agent.get("registration_status") == "registered":
-            health_status = "offline" if activity_status == "stale" else "degraded"
-            freshness = f", last active {activity_status}" if activity_status != "unknown" else ""
-            status_reason = f"Registered in AI Maestro ({orchestration_status}) but no local runtime detected{freshness}"
         else:
             health_status = "offline"
             status_reason = "No local runtime detected"
@@ -1867,14 +1820,10 @@ def _finalize_agents(
             presence_kind = "local-runtime"
             presence_status = "online"
             presence_reason = "Local runtime detected"
-        elif agent.get("registration_status") == "registered":
-            presence_kind = "external-registration"
-            presence_status = "registered"
-            presence_reason = "Registered in orchestration, but no local runtime detected"
         else:
             presence_kind = "local-runtime"
             presence_status = "offline"
-            presence_reason = "No local runtime or external registration detected"
+            presence_reason = "No local runtime detected"
 
         enriched["last_active"] = effective_last_active
         enriched["activity_status"] = activity_status
@@ -1889,7 +1838,6 @@ def _finalize_agents(
             "status": presence_status,
             "reason": presence_reason,
         }
-        enriched["orchestration_reachable"] = maestro_service.get("status") == "up"
         profiles = list(defs_by_name.get(name, {}).get("local_profiles", agent.get("local_profiles", [])))
         if name == "hermes":
             existing_names = {str(item.get("name", "")) for item in profiles}
@@ -2499,34 +2447,6 @@ def _fetch_agent_last_active(hermes_status: dict, amp_messages: list) -> dict[st
         pass
     result["atlas"] = atlas_ts
 
-    # AI Maestro local runtime status files for registered agents
-    try:
-        registry = json.loads(AIMAESTRO_REGISTRY_PATH.read_text())
-        latest_by_name: dict[str, str] = {}
-        for agent in registry:
-            name = str(agent.get("name", "")).strip().lower()
-            agent_id = str(agent.get("id", "")).strip()
-            if not name or not agent_id:
-                continue
-            status_path = AIMAESTRO_AGENTS_DIR / agent_id / "status.json"
-            if not status_path.exists():
-                continue
-            try:
-                payload = json.loads(status_path.read_text())
-            except Exception:
-                continue
-            if payload.get("isRunning") is not True:
-                continue
-            last_updated_ms = payload.get("lastUpdated")
-            if not isinstance(last_updated_ms, (int, float)):
-                continue
-            ts = datetime.fromtimestamp(last_updated_ms / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-            prev = latest_by_name.get(name)
-            if not prev or ts > prev:
-                latest_by_name[name] = ts
-        result.update(latest_by_name)
-    except Exception:
-        pass
 
     return result
 
@@ -2994,44 +2914,13 @@ async def api_amp():
     return {"messages": messages}
 
 
-AI_MAESTRO_URL = os.getenv("AI_MAESTRO_URL", "http://localhost:23000")
 _ANSI_RE = re.compile(r'\x1b\[[0-9;]*m')
-
-
-async def _fetch_maestro_messages() -> list[dict[str, Any]]:
-    """Fetch latest 20 messages for claude/atlas from AI Maestro API."""
-    url = f"{AI_MAESTRO_URL}/api/agents/claude/messages"
-    try:
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            r = await client.get(url)
-            r.raise_for_status()
-            data = r.json()
-    except Exception as exc:
-        return [{"error": str(exc)}]
-
-    raw = data if isinstance(data, list) else data.get("messages", data.get("data", []))
-    messages = []
-    for item in raw[:20]:
-        if not isinstance(item, dict):
-            continue
-        body = item.get("body", item.get("message", item.get("content", ""))) or ""
-        body = _ANSI_RE.sub("", str(body))
-        preview = body[:120]
-        messages.append({
-            "id": item.get("id", item.get("message_id", "")),
-            "from": item.get("from", item.get("sender", item.get("from_agent", "?"))),
-            "subject": item.get("subject", item.get("type", "")),
-            "timestamp": item.get("timestamp", item.get("sent_at", item.get("created_at", ""))),
-            "status": item.get("status", item.get("read", "unread") if isinstance(item.get("read"), str) else ("read" if item.get("read") else "unread")),
-            "preview": preview,
-        })
-    return messages
 
 
 @app.get("/api/amp/messages")
 async def api_amp_messages():
-    """Fetch latest 20 AMP messages for atlas/claude from AI Maestro."""
-    messages = await _fetch_maestro_messages()
+    """Fetch latest 20 AMP messages for atlas from local filesystem inbox."""
+    messages = _read_agent_messages(limit=20)
     return {"messages": messages}
 
 
@@ -4307,8 +4196,8 @@ _MESH_PORTS = [
     ("memory_mcp", 2033),
     ("hermes", 18789),
     ("mlx_35b", 8081),
-    ("mlx_7b", 8083),
-    ("ai_maestro", 23000),
+    ("mlx_9b", 8083),
+    ("screenpipe", 3030),
 ]
 
 
