@@ -125,77 +125,38 @@ function shortModelName(raw: string | undefined): string | null {
 
 // ── Telemetry stamp (top-right) ───────────────────────────────────────────────
 
-function TelemetryStamp({ isConnected, watcher }: { isConnected: boolean; watcher: SignalWatcherState | null }) {
+// ── Clock dot — minimal right-column indicator ────────────────────────────────
+
+function ClockDot({ isConnected }: { isConnected: boolean }) {
   const lastUpdate = useDashboardStore((s) => s.lastUpdate)
-  const system = useDashboardStore((s) => s.system)
-  const llmActive = useDashboardStore((s) => s.llmActive)
-  const services = useDashboardStore((s) => s.services)
   const [time, setTime] = useState(() => new Date().toLocaleTimeString())
   const [live, setLive] = useState(false)
-  const [watcherSecs, setWatcherSecs] = useState<number | null>(null)
 
   useEffect(() => {
     const id = setInterval(() => {
       setTime(new Date().toLocaleTimeString())
       setLive(lastUpdate ? Date.now() - lastUpdate.getTime() < 6000 : false)
-      setWatcherSecs((s) => (s != null && s > 0 ? s - 1 : s))
     }, 1000)
     return () => clearInterval(id)
   }, [lastUpdate])
 
-  useEffect(() => {
-    setWatcherSecs(watcher?.next_run_in_seconds ?? null)
-  }, [watcher?.next_run_in_seconds])
-
-  const uptime = system?.uptime_seconds ? formatUptime(system.uptime_seconds) : null
-  const modelName = shortModelName(services.mlx_server?.active_model ?? services.mlx_server?.models?.[0])
-  const backendLabel = llmActive ? llmActive.toUpperCase() : 'LLM'
-  const signalCountdown = watcherSecs != null ? fmtIn(watcherSecs) : null
-  const signalFindings = watcher?.findings_today ?? 0
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '5px 8px',
-          border: '1px solid rgba(180,130,255,0.22)',
-          background: 'linear-gradient(180deg, rgba(12,6,24,0.82), rgba(8,4,18,0.66))',
-          color: '#effcff',
-          fontSize: 12,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-        }}
-        title={modelName ?? undefined}
-      >
-        <span style={{ width: 5, height: 5, borderRadius: '50%', background: llmActive ? '#9aefff' : '#86979f', boxShadow: llmActive ? '0 0 8px rgba(154,239,255,0.75)' : 'none' }} />
-        <span style={{ color: llmActive ? '#9aefff' : C.soft }}>{backendLabel}</span>
-        {modelName ? <span style={{ color: '#effcff', textTransform: 'none', letterSpacing: '0.03em' }}>{modelName}</span> : null}
-      </div>
-      {uptime && (
-        <span style={{ fontSize: 10, letterSpacing: '0.14em', color: C.dim, textTransform: 'uppercase' }}>
-          UP {uptime}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: '50%',
+          background: isConnected && live ? C.teal : C.dim,
+          boxShadow: isConnected && live ? `0 0 8px ${C.teal}` : 'none',
+          animation: !isConnected ? 'link-blink 1.4s ease-in-out infinite' : undefined,
+        }} />
+        <span style={{ fontSize: 18, color: C.text, letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums', fontFamily: '"Fira Code", monospace' }}>
+          {time}
         </span>
-      )}
-      <span style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: isConnected && live ? C.teal : C.dim, animation: !isConnected ? 'link-blink 1.4s ease-in-out infinite' : undefined }}>
-        {isConnected ? 'TELEMETRY LIVE' : 'RECONNECTING…'}
-      </span>
-      <span style={{ fontSize: 20, color: C.text, letterSpacing: '0.08em', fontVariantNumeric: 'tabular-nums', fontFamily: '"Fira Code", monospace' }}>
-        {time}
-      </span>
-      {watcher?.job_active && (
-        <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
-          <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-            SIGNAL {signalCountdown ? `↻ ${signalCountdown}` : '—'}
-          </span>
-          {signalFindings > 0 && (
-            <span style={{ fontSize: 9, color: C.teal, letterSpacing: '0.1em' }}>
-              {signalFindings} today
-            </span>
-          )}
-        </div>
+      </div>
+      {!isConnected && (
+        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+          reconnecting…
+        </span>
       )}
     </div>
   )
@@ -223,58 +184,73 @@ function CommandHeader({ onlineAgents, totalAgents }: { onlineAgents: number; to
   )
 }
 
-function StatusLegend() {
-  const items = [
-    { label: 'online', color: C.green },
-    { label: 'degraded', color: C.amber },
-    { label: 'offline', color: C.red },
-  ]
+// ── Mesh status bar — replaces StatusLegend + OpsStrip + AlertsLine + OpsUtilityBlock ──
+
+function MeshStatusBar({ onSelect }: { onSelect: (s: GraphSelection) => void }) {
+  const services = useDashboardStore((s) => s.services)
+  const memorySummary = useDashboardStore((s) => s.memorySummary)
+  const routingSummary = useDashboardStore((s) => s.routingSummary)
+
+  type Alert = { text: string; tone: string; sel?: GraphSelection }
+  const alerts: Alert[] = []
+
+  for (const [key, svc] of Object.entries(services)) {
+    if (svc.status === 'down' || svc.status === 'degraded') {
+      const tone = svc.status === 'down' ? C.red : C.amber
+      alerts.push({ text: `${svc.name ?? key} ${svc.status}`, tone, sel: { type: 'service', key, label: svc.name ?? key } })
+    }
+  }
+  if (memorySummary?.primary_cause?.kind && memorySummary.primary_cause.kind !== 'healthy') {
+    const kind = memorySummary.primary_cause.kind
+    alerts.push({
+      text: `memory ${kind}: ${memorySummary.primary_cause.summary}`,
+      tone: kind === 'pressure' || kind === 'stale' ? C.amber : C.red,
+      sel: { type: 'service', key: 'memory_mcp', label: 'Memory' },
+    })
+  }
+  if (routingSummary?.warnings?.[0]) {
+    alerts.push({ text: routingSummary.warnings[0].slice(0, 60), tone: C.amber })
+  }
+
+  if (alerts.length === 0) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px' }}>
+        <span style={{ width: 4, height: 4, borderRadius: '50%', background: C.green, boxShadow: `0 0 6px ${C.green}` }} />
+        <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Mesh nominal</span>
+      </div>
+    )
+  }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '5px 9px',
-        border: '1px solid rgba(160,100,255,0.16)',
-        background: 'rgba(10,5,20,0.38)',
-      }}
-    >
-      <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-        States
-      </span>
-      {items.map((item) => (
-        <span key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: C.dim, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          <span style={{ width: 4, height: 4, borderRadius: '50%', background: item.color, boxShadow: `0 0 6px ${item.color}` }} />
-          {item.label}
-        </span>
+    <div style={{
+      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6,
+      padding: '5px 10px',
+      border: `1px solid ${alerts.some(a => a.tone === C.red) ? 'rgba(255,112,96,0.28)' : 'rgba(240,192,64,0.28)'}`,
+      background: 'rgba(10,4,18,0.55)',
+      maxWidth: 680,
+    }}>
+      {alerts.slice(0, 3).map((alert, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => alert.sel && onSelect(alert.sel)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'transparent', border: 'none', padding: 0, cursor: alert.sel ? 'pointer' : 'default',
+          }}
+        >
+          <span style={{ width: 4, height: 4, borderRadius: '50%', background: alert.tone, boxShadow: `0 0 5px ${alert.tone}`, flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: alert.tone, letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>
+            {alert.text}
+          </span>
+        </button>
       ))}
+      {alerts.length > 3 && (
+        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+          +{alerts.length - 3}
+        </span>
+      )}
     </div>
-  )
-}
-
-function Sparkline({ points }: { points: { up: boolean }[] | undefined }) {
-  if (!points || points.length < 2) return null
-  const w = 40
-  const h = 10
-  const step = w / Math.max(points.length - 1, 1)
-  const coords = points
-    .map((point, index) => `${index * step},${point.up ? 1.5 : h - 1.5}`)
-    .join(' ')
-  const stroke = points[points.length - 1]?.up ? C.green : C.red
-
-  return (
-    <svg width={w} height={h} style={{ display: 'block', flexShrink: 0 }}>
-      <polyline
-        points={coords}
-        fill="none"
-        stroke={stroke}
-        strokeWidth="1"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
   )
 }
 
@@ -317,161 +293,6 @@ function StatPill({ label, value, sub, warn }: { label: string; value: string; s
   )
 }
 
-function OpsStrip({ onSelect }: { onSelect: (selection: GraphSelection) => void }) {
-  const services = useDashboardStore((s) => s.services)
-  const serviceHistory = useDashboardStore((s) => s.serviceHistory)
-  const routingSummary = useDashboardStore((s) => s.routingSummary)
-  const memorySummary = useDashboardStore((s) => s.memorySummary)
-  const securityPosture = useDashboardStore((s) => s.securityPosture)
-
-  const serviceItems = [
-    ['Gateway', 'openviking', services.openviking?.status],
-    ['Memory', 'memory_mcp', services.memory_mcp?.status],
-    ['MLX', 'mlx_server', services.mlx_server?.status],
-    ['OpenClaw', 'openclaw_mcp', services.openclaw_mcp?.status],
-    ['Screenpipe', 'screenpipe', services.screenpipe?.status],
-  ] as const satisfies ReadonlyArray<readonly [string, string, string | undefined]>
-
-  const historyKeys: Record<string, string> = {
-    Gateway: 'openviking',
-    Memory: 'memory_mcp',
-    MLX: 'mlx_server',
-    OpenClaw: 'openclaw_mcp',
-    Screenpipe: 'screenpipe',
-  }
-
-  const toneFor = (status?: string) =>
-    status === 'up' || status === 'healthy' ? C.green : status === 'down' ? C.red : C.amber
-
-  const secChips = securityPosture ? [
-    { label: 'Localhost', ok: securityPosture.all_localhost_bound, title: 'All mesh ports bound to 127.0.0.1' },
-    { label: 'Tailscale', ok: securityPosture.tailscale_up, title: 'Tailscale VPN' },
-    { label: 'xSearch', ok: securityPosture.xsearch_oauth, title: 'xAI Grok OAuth' },
-  ] : []
-
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gap: 6,
-        padding: '8px 12px',
-        border: '1px solid rgba(160,100,255,0.16)',
-        background: 'rgba(10,5,20,0.36)',
-      }}
-    >
-      {/* Row 1 — service status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-          Ops
-        </span>
-        {serviceItems.map(([label, serviceKey, status]) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => onSelect({ type: 'service', key: serviceKey, label })}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
-          >
-            <span style={{ width: 4, height: 4, borderRadius: '50%', background: toneFor(status), boxShadow: `0 0 6px ${toneFor(status)}` }} />
-            {label}
-            <Sparkline points={serviceHistory[historyKeys[label]]} />
-          </button>
-        ))}
-        <span style={{ width: 1, height: 12, background: 'rgba(160,100,255,0.14)' }} />
-        <button
-          type="button"
-          onClick={() => onSelect({ type: 'service', key: 'memory_mcp', label: 'Memory' })}
-          style={{ fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
-          title="View memory service details"
-        >
-          MEM · {routingSummary?.memory_mode ?? memorySummary?.primary_cause?.kind ?? 'healthy'}
-        </button>
-        <button
-          type="button"
-          onClick={() => onSelect({ type: 'agent', key: (routingSummary?.guidance?.memory_heavy ?? 'hermes').toLowerCase(), label: routingSummary?.guidance?.memory_heavy ?? 'Hermes' })}
-          style={{ fontSize: 11, color: C.soft, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer' }}
-          title="View active routing agent"
-        >
-          VIA → {routingSummary?.guidance?.memory_heavy ?? '—'}{routingSummary?.guidance?.memory_heavy?.toLowerCase() === 'hermes' && routingSummary?.profile_guidance?.memory_heavy ? ` · ${routingSummary.profile_guidance.memory_heavy}` : ''}
-        </button>
-      </div>
-
-      {/* Row 2 — security posture chips */}
-      {secChips.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderTop: '1px solid rgba(160,100,255,0.10)', paddingTop: 5 }}>
-          <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-            Sec
-          </span>
-          {secChips.map(({ label, ok, title }) => (
-            <span
-              key={label}
-              title={title}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: ok ? C.green : C.amber, letterSpacing: '0.12em', textTransform: 'uppercase' }}
-            >
-              <span style={{ width: 4, height: 4, borderRadius: '50%', background: ok ? C.green : C.amber, boxShadow: `0 0 5px ${ok ? C.green : C.amber}` }} />
-              {label}
-            </span>
-          ))}
-          <span style={{ fontSize: 9, color: securityPosture?.score === securityPosture?.max_score ? C.green : C.amber, letterSpacing: '0.1em', marginLeft: 2 }}>
-            {securityPosture?.score}/{securityPosture?.max_score}
-          </span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AlertsLine() {
-  const services = useDashboardStore((s) => s.services)
-  const routingSummary = useDashboardStore((s) => s.routingSummary)
-  const memorySummary = useDashboardStore((s) => s.memorySummary)
-
-  const alerts: Array<{ text: string; tone: string }> = []
-  if (memorySummary?.primary_cause?.kind && memorySummary.primary_cause.kind !== 'healthy') {
-    alerts.push({
-      text: `memory ${memorySummary.primary_cause.kind}: ${memorySummary.primary_cause.summary}`,
-      tone: memorySummary.primary_cause.kind === 'pressure' || memorySummary.primary_cause.kind === 'stale' ? C.amber : C.red,
-    })
-  }
-  if (services.hermes_gateway?.status === 'degraded' || services.hermes_gateway?.status === 'down') {
-    alerts.push({
-      text: `hermes gateway ${services.hermes_gateway.status}`,
-      tone: services.hermes_gateway.status === 'down' ? C.red : C.amber,
-    })
-  }
-  if (routingSummary?.warnings?.length) {
-    alerts.push({ text: routingSummary.warnings[0], tone: C.amber })
-  }
-
-  const primary = alerts[0]
-  if (!primary) return null
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        maxWidth: 520,
-        padding: '7px 11px',
-        border: '1px solid rgba(160,100,255,0.14)',
-        background: 'rgba(10,5,20,0.30)',
-      }}
-    >
-      <span style={{ fontSize: 9, color: primary.tone, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-        Alert
-      </span>
-      <span style={{ fontSize: 11, color: C.soft, letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {primary.text}
-      </span>
-      {alerts.length > 1 && (
-        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.14em', textTransform: 'uppercase', flexShrink: 0 }}>
-          +{alerts.length - 1} more
-        </span>
-      )}
-    </div>
-  )
-}
-
 function fmtIn(secs: number | null | undefined) {
   if (secs == null) return '—'
   if (secs < 60) return `${secs}s`
@@ -479,79 +300,6 @@ function fmtIn(secs: number | null | undefined) {
   return `${Math.floor(secs / 3600)}h`
 }
 
-function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) => void }) {
-  const cronJobs = useDashboardStore((s) => s.cronJobs)
-  const permissionAuditSummary = useDashboardStore((s) => s.permissionAuditSummary)
-  const agentMessages = useDashboardStore((s) => s.agentMessages)
-  const memorySummary = useDashboardStore((s) => s.memorySummary)
-  const [open, setOpen] = useState(false)
-
-  const nextJob = cronJobs
-    .filter((job) => job.enabled !== false && job.next_run_in_seconds != null)
-    .sort((a, b) => (a.next_run_in_seconds ?? Infinity) - (b.next_run_in_seconds ?? Infinity))[0]
-
-  const denyCount = permissionAuditSummary?.decision_counts?.deny ?? 0
-  const askCount = permissionAuditSummary?.decision_counts?.ask ?? 0
-  const memoryAlerts = memorySummary?.warnings?.length ?? 0
-  const hasAlert = denyCount > 0 || memoryAlerts > 0
-
-  const summaryItems: Array<[string, string, GraphSelection]> = [
-    ['Next cron', nextJob ? `${nextJob.name.slice(0, 12)} · ${fmtIn(nextJob.next_run_in_seconds)}` : 'idle', { type: 'agent', key: 'hermes', label: 'Hermes' }],
-    ['Audit', `${denyCount} deny · ${askCount} ask`, { type: 'agent', key: 'atlas', label: 'Lead' }],
-    ['Queue', `${agentMessages.length} msgs`, { type: 'service', key: 'screenpipe', label: 'Screenpipe' }],
-    ['Memory', `${memoryAlerts} alerts`, { type: 'service', key: 'memory_mcp', label: 'Memory' }],
-  ]
-
-  return (
-    <div
-      style={{
-        pointerEvents: 'all',
-        minWidth: open ? 220 : 'auto',
-        border: `1px solid ${hasAlert ? 'rgba(240,192,64,0.28)' : 'rgba(160,100,255,0.16)'}`,
-        background: 'rgba(10,5,20,0.36)',
-        padding: '7px 12px',
-      }}
-    >
-      {/* Header — always visible */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, width: '100%',
-        }}
-      >
-        {hasAlert && (
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: denyCount > 0 ? C.red : C.amber, boxShadow: `0 0 6px ${denyCount > 0 ? C.red : C.amber}`, flexShrink: 0 }} />
-        )}
-        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase', flex: 1, textAlign: 'left' }}>
-          Operator
-        </span>
-        <span style={{ fontSize: 9, color: C.soft, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-          {open ? '▲' : '▼'}
-        </span>
-      </button>
-
-      {/* Expandable summary rows */}
-      {open && (
-        <div style={{ display: 'grid', gap: 4, marginTop: 7, paddingTop: 7, borderTop: '1px solid rgba(160,100,255,0.12)' }}>
-          {summaryItems.map(([label, value, selection]) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => onSelect(selection)}
-              style={{ display: 'flex', justifyContent: 'space-between', gap: 10, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
-            >
-              <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.14em', textTransform: 'uppercase' }}>{label}</span>
-              <span style={{ fontSize: 11, color: C.soft, letterSpacing: '0.05em', textAlign: 'right' }}>{value}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-    </div>
-  )
-}
 
 // ── OS notifications ─────────────────────────────────────────────────────────
 
@@ -656,7 +404,6 @@ export default function App() {
   const { isConnected } = useWebSocket()
   const system = useDashboardStore((s) => s.system)
   const agents = useDashboardStore((s) => s.agents)
-  const signalWatcher = useDashboardStore((s) => s.signalWatcher)
   const [graphSelection, setGraphSelection] = useState<GraphSelection | null>(null)
 
   useServiceNotifications()
@@ -678,53 +425,49 @@ export default function App() {
     >
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
 
-        {/* Volumetric fog — behind sphere */}
         <VolumetricFog />
-
-        {/* Central sphere with built-in HUD panels */}
         <MeshGraph selected={graphSelection} onSelectionChange={setGraphSelection} />
-
-        {/* Floating particles — above sphere */}
         <FloatingParticles />
 
-        {/* Top bar + bottom stat strip — above particles */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 4 }}>
 
-          {/* Top bar */}
+          {/* Top bar — left: identity / center: single alert bar / right: clock dot */}
           <div style={{
             position: 'absolute', top: 0, left: 0, right: 0,
             display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-            padding: '12px 18px 0',
+            padding: '14px 20px 0',
             gap: 16,
           }}>
-            <div style={{ flex: 1.1, maxWidth: 140, pointerEvents: 'all' }}>
+            <div style={{ pointerEvents: 'all' }}>
               <CommandHeader onlineAgents={onlineAgents} totalAgents={agents.length} />
             </div>
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', paddingTop: 4 }}>
-              <div style={{ display: 'grid', gap: 6, justifyItems: 'center', width: 'min(720px, 100%)' }}>
-                <StatusLegend />
-                <OpsStrip onSelect={setGraphSelection} />
-                <AlertsLine />
-                <OpsUtilityBlock onSelect={setGraphSelection} />
-              </div>
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', paddingTop: 6, pointerEvents: 'all' }}>
+              <MeshStatusBar onSelect={setGraphSelection} />
             </div>
-            <div style={{ flex: 1.1, display: 'flex', justifyContent: 'flex-end', pointerEvents: 'all' }}>
-              <TelemetryStamp isConnected={isConnected} watcher={signalWatcher} />
+            <div style={{ pointerEvents: 'all' }}>
+              <ClockDot isConnected={isConnected} />
             </div>
           </div>
 
-          {/* Bottom stat strip + timeline scrubber */}
-          <div style={{
-            position: 'absolute', bottom: 16, left: 0, right: 0,
-            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10,
-            flexWrap: 'wrap',
-          }}>
+          {/* Bottom strip — hover to reveal */}
+          <div
+            style={{
+              position: 'absolute', bottom: 16, left: 0, right: 0,
+              display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10,
+              flexWrap: 'wrap',
+              opacity: 0,
+              transition: 'opacity 0.25s ease',
+              pointerEvents: 'all',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '1' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '0' }}
+          >
             <StatPill label="System Memory" value={system?.ram_pct != null ? `${Math.round(system.ram_pct)}%` : '—'} sub={system ? `${system.ram_used_gb}/${system.ram_total_gb} GB` : undefined} />
             <StatPill label="MLX Memory"    value={system?.mlx_ram_pct != null ? `${Math.round(system.mlx_ram_pct)}%` : '—'} sub={system?.mlx_ram_gb ? `${system.mlx_ram_gb} GB` : undefined} />
             <StatPill label="CPU Load"      value={system?.cpu_pct != null ? `${Math.round(system.cpu_pct)}%` : '—'} sub={system?.load_1m ? `${system.load_1m} avg` : undefined} />
             <StatPill label="Disk"          value={system?.disk_pct != null ? `${Math.round(system.disk_pct)}%` : '—'} sub={system ? `${system.disk_used_gb}/${system.disk_total_gb} GB` : undefined} warn={system?.disk_pct != null && system.disk_pct > 85} />
             <StatPill label="Mesh Online"   value={`${onlineAgents}/${agents.length || '—'}`} sub={system?.uptime_seconds ? `UP ${formatUptime(system.uptime_seconds)}` : undefined} />
-            <div style={{ pointerEvents: 'all' }}><TimelineScrubber /></div>
+            <TimelineScrubber />
           </div>
 
         </div>

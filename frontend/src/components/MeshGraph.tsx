@@ -172,9 +172,7 @@ export default function MeshGraph({
         ctx.fillRect(x, y, 1.4, 1.4)
       }
 
-      const panels: Array<[number, number, number, number, PanelDatum | undefined]> = [
-        [W - edgePad - sidePanelW, topHudClear, sidePanelW, topPanelH, realPanelData[1]],
-      ]
+      const panels: Array<[number, number, number, number, PanelDatum | undefined]> = []
 
       panels.forEach(([x, y, w, h, panel], index) => {
         const cut = compactLayout ? 10 : 14
@@ -1310,55 +1308,6 @@ export default function MeshGraph({
             })}
           </div>
 
-          {memorySummary && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: '12px 13px',
-                border: '1px solid rgba(100,210,255,0.12)',
-                background: 'rgba(255,255,255,0.02)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 10, color: 'rgba(150,220,255,0.6)', letterSpacing: '0.22em', textTransform: 'uppercase' }}>
-                  Memory Route
-                </span>
-                <span style={{ fontSize: 12, color: memoryCauseColor, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-                  {memoryCause}
-                </span>
-              </div>
-
-              <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-                <div>
-                  <div style={{ fontSize: 10, color: 'rgba(150,200,220,0.5)', letterSpacing:'0.12em', textTransform:'uppercase' }}>Gateway</div>
-                  <div style={{ fontSize: 13, color: memorySummary.component_health?.gateway === 'up' ? STATUS_COLORS.green : STATUS_COLORS.red, marginTop: 4 }}>
-                    {memorySummary.component_health?.gateway ?? 'unknown'}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 10, color: 'rgba(150,200,220,0.5)', letterSpacing:'0.12em', textTransform:'uppercase' }}>Substrate</div>
-                  <div style={{ fontSize: 13, color: memorySummary.component_health?.substrate === 'up' ? STATUS_COLORS.green : memorySummary.component_health?.substrate === 'down' ? STATUS_COLORS.red : STATUS_COLORS.amber, marginTop: 4 }}>
-                    {memorySummary.component_health?.substrate ?? 'unknown'}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 10, color: 'rgba(150,200,220,0.5)', letterSpacing:'0.12em', textTransform:'uppercase' }}>Impact</div>
-                  <div style={{ fontSize: 13, color: '#dffbff', marginTop: 4 }}>
-                    {routingSummary?.guidance?.memory_heavy ?? '—'}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 9, padding: '9px 10px', border: '1px solid rgba(100,210,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
-                <div style={{ fontSize: 10, color: 'rgba(150,220,255,0.56)', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 5 }}>
-                  Primary Cause
-                </div>
-                <div style={{ fontSize: 12, color: 'rgba(220,242,250,0.86)', lineHeight: 1.55 }}>
-                  {memoryCauseSummary}
-                </div>
-              </div>
-            </div>
-          )}
 
           {activeService && (() => {
         const statusRaw = (activeService?.status ?? '').toLowerCase()
