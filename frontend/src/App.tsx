@@ -125,25 +125,33 @@ function shortModelName(raw: string | undefined): string | null {
 
 // ── Telemetry stamp (top-right) ───────────────────────────────────────────────
 
-function TelemetryStamp({ isConnected }: { isConnected: boolean }) {
+function TelemetryStamp({ isConnected, watcher }: { isConnected: boolean; watcher: SignalWatcherState | null }) {
   const lastUpdate = useDashboardStore((s) => s.lastUpdate)
   const system = useDashboardStore((s) => s.system)
   const llmActive = useDashboardStore((s) => s.llmActive)
   const services = useDashboardStore((s) => s.services)
   const [time, setTime] = useState(() => new Date().toLocaleTimeString())
   const [live, setLive] = useState(false)
+  const [watcherSecs, setWatcherSecs] = useState<number | null>(null)
 
   useEffect(() => {
     const id = setInterval(() => {
       setTime(new Date().toLocaleTimeString())
       setLive(lastUpdate ? Date.now() - lastUpdate.getTime() < 6000 : false)
+      setWatcherSecs((s) => (s != null && s > 0 ? s - 1 : s))
     }, 1000)
     return () => clearInterval(id)
   }, [lastUpdate])
 
+  useEffect(() => {
+    setWatcherSecs(watcher?.next_run_in_seconds ?? null)
+  }, [watcher?.next_run_in_seconds])
+
   const uptime = system?.uptime_seconds ? formatUptime(system.uptime_seconds) : null
   const modelName = shortModelName(services.mlx_server?.active_model ?? services.mlx_server?.models?.[0])
   const backendLabel = llmActive ? llmActive.toUpperCase() : 'LLM'
+  const signalCountdown = watcherSecs != null ? fmtIn(watcherSecs) : null
+  const signalFindings = watcher?.findings_today ?? 0
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
@@ -177,6 +185,18 @@ function TelemetryStamp({ isConnected }: { isConnected: boolean }) {
       <span style={{ fontSize: 20, color: C.text, letterSpacing: '0.08em', fontVariantNumeric: 'tabular-nums', fontFamily: '"Fira Code", monospace' }}>
         {time}
       </span>
+      {watcher?.job_active && (
+        <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
+          <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+            SIGNAL {signalCountdown ? `↻ ${signalCountdown}` : '—'}
+          </span>
+          {signalFindings > 0 && (
+            <span style={{ fontSize: 9, color: C.teal, letterSpacing: '0.1em' }}>
+              {signalFindings} today
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -464,7 +484,7 @@ function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) =
   const permissionAuditSummary = useDashboardStore((s) => s.permissionAuditSummary)
   const agentMessages = useDashboardStore((s) => s.agentMessages)
   const memorySummary = useDashboardStore((s) => s.memorySummary)
-  const [expanded, setExpanded] = useState(false)
+  const [open, setOpen] = useState(false)
 
   const nextJob = cronJobs
     .filter((job) => job.enabled !== false && job.next_run_in_seconds != null)
@@ -473,6 +493,7 @@ function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) =
   const denyCount = permissionAuditSummary?.decision_counts?.deny ?? 0
   const askCount = permissionAuditSummary?.decision_counts?.ask ?? 0
   const memoryAlerts = memorySummary?.warnings?.length ?? 0
+  const hasAlert = denyCount > 0 || memoryAlerts > 0
 
   const summaryItems: Array<[string, string, GraphSelection]> = [
     ['Next cron', nextJob ? `${nextJob.name.slice(0, 12)} · ${fmtIn(nextJob.next_run_in_seconds)}` : 'idle', { type: 'agent', key: 'hermes', label: 'Hermes' }],
@@ -485,126 +506,49 @@ function OpsUtilityBlock({ onSelect }: { onSelect: (selection: GraphSelection) =
     <div
       style={{
         pointerEvents: 'all',
-        minWidth: expanded ? 220 : 170,
-        border: '1px solid rgba(160,100,255,0.16)',
+        minWidth: open ? 220 : 'auto',
+        border: `1px solid ${hasAlert ? 'rgba(240,192,64,0.28)' : 'rgba(160,100,255,0.16)'}`,
         background: 'rgba(10,5,20,0.36)',
-        padding: '9px 12px',
+        padding: '7px 12px',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+      {/* Header — always visible */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 7,
+          background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, width: '100%',
+        }}
+      >
+        {hasAlert && (
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: denyCount > 0 ? C.red : C.amber, boxShadow: `0 0 6px ${denyCount > 0 ? C.red : C.amber}`, flexShrink: 0 }} />
+        )}
+        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase', flex: 1, textAlign: 'left' }}>
           Operator
         </span>
-        <button
-          type="button"
-          onClick={() => setExpanded((value) => !value)}
-          style={{
-            border: 'none',
-            background: 'transparent',
-            color: C.soft,
-            cursor: 'pointer',
-            fontSize: 10,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            padding: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-          }}
-        >
-          {!expanded && (denyCount > 0 || memoryAlerts > 0) && (
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: denyCount > 0 ? C.red : C.amber, boxShadow: `0 0 6px ${denyCount > 0 ? C.red : C.amber}` }} />
-          )}
-          {expanded ? 'collapse' : 'expand'}
-        </button>
-      </div>
-
-      <div style={{ display: 'grid', gap: 4, marginTop: 6 }}>
-        {summaryItems.map(([label, value, selection]) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => onSelect(selection)}
-            style={{ display: 'flex', justifyContent: 'space-between', gap: 10, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
-          >
-            <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.14em', textTransform: 'uppercase' }}>{label}</span>
-            <span style={{ fontSize: 11, color: C.soft, letterSpacing: '0.05em', textAlign: 'right' }}>{value}</span>
-          </button>
-        ))}
-      </div>
-
-      {expanded ? (
-        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(160,100,255,0.12)', display: 'grid', gap: 5 }}>
-          {nextJob ? (
-            <div style={{ fontSize: 10, color: C.soft, lineHeight: 1.5 }}>
-              cron target: <span style={{ color: C.text }}>{nextJob.name}</span>
-            </div>
-          ) : null}
-          <div style={{ fontSize: 10, color: C.soft, lineHeight: 1.5 }}>
-            audit posture: <span style={{ color: C.text }}>{denyCount > 0 || askCount > 0 ? 'active approvals' : 'quiet'}</span>
-          </div>
-          <div style={{ fontSize: 10, color: C.soft, lineHeight: 1.5 }}>
-            queue state: <span style={{ color: C.text }}>{agentMessages.length > 0 ? 'traffic present' : 'clear'}</span>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-// ── Signal Watcher widget ─────────────────────────────────────────────────────
-
-function SignalWatcherWidget({ watcher }: { watcher: SignalWatcherState | null }) {
-  const [secs, setSecs] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (!watcher?.next_run_in_seconds) { setSecs(null); return }
-    setSecs(watcher.next_run_in_seconds)
-    const id = setInterval(() => setSecs((s) => (s != null && s > 0 ? s - 1 : s)), 1000)
-    return () => clearInterval(id)
-  }, [watcher?.next_run_in_seconds])
-
-  const countdown = secs != null ? fmtIn(secs) : '—'
-  const findings = watcher?.findings_today ?? 0
-  const active = watcher?.job_active ?? false
-
-  return (
-    <div style={{
-      padding: '8px 12px',
-      border: '1px solid rgba(160,100,255,0.16)',
-      background: 'rgba(10,5,20,0.36)',
-      minWidth: 160,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-        <span style={{ width: 4, height: 4, borderRadius: '50%', background: active ? C.teal : C.dim, boxShadow: active ? `0 0 6px ${C.teal}` : 'none' }} />
-        <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-          Signal Watch
+        <span style={{ fontSize: 9, color: C.soft, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          {open ? '▲' : '▼'}
         </span>
-      </div>
-      <div style={{ display: 'grid', gap: 3 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Next run</span>
-          <span style={{ fontSize: 11, color: C.soft, letterSpacing: '0.05em' }}>{countdown}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Today</span>
-          <span style={{ fontSize: 11, color: findings > 0 ? C.teal : C.dim, letterSpacing: '0.05em' }}>{findings} signals</span>
-        </div>
-      </div>
-      {watcher?.top_finding && (
-        <div style={{
-          marginTop: 6, paddingTop: 5,
-          borderTop: '1px solid rgba(160,100,255,0.12)',
-          fontSize: 9, color: C.soft, lineHeight: 1.5,
-          overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-          maxWidth: 180,
-          letterSpacing: '0.04em',
-        }}
-          title={watcher.top_finding}
-        >
-          {watcher.top_finding.replace(/^AI SIGNAL \[\w+\] \d{4}-\d{2}-\d{2}: /, '')}
+      </button>
+
+      {/* Expandable summary rows */}
+      {open && (
+        <div style={{ display: 'grid', gap: 4, marginTop: 7, paddingTop: 7, borderTop: '1px solid rgba(160,100,255,0.12)' }}>
+          {summaryItems.map(([label, value, selection]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => onSelect(selection)}
+              style={{ display: 'flex', justifyContent: 'space-between', gap: 10, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+            >
+              <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.14em', textTransform: 'uppercase' }}>{label}</span>
+              <span style={{ fontSize: 11, color: C.soft, letterSpacing: '0.05em', textAlign: 'right' }}>{value}</span>
+            </button>
+          ))}
         </div>
       )}
+
     </div>
   )
 }
@@ -762,21 +706,17 @@ export default function App() {
                 <OpsStrip onSelect={setGraphSelection} />
                 <AlertsLine />
                 <OpsUtilityBlock onSelect={setGraphSelection} />
-                <TimelineScrubber />
               </div>
             </div>
             <div style={{ flex: 1.1, display: 'flex', justifyContent: 'flex-end', pointerEvents: 'all' }}>
-              <div style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
-                <TelemetryStamp isConnected={isConnected} />
-                <SignalWatcherWidget watcher={signalWatcher} />
-              </div>
+              <TelemetryStamp isConnected={isConnected} watcher={signalWatcher} />
             </div>
           </div>
 
-          {/* Bottom stat strip */}
+          {/* Bottom stat strip + timeline scrubber */}
           <div style={{
             position: 'absolute', bottom: 16, left: 0, right: 0,
-            display: 'flex', justifyContent: 'center', gap: 10,
+            display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10,
             flexWrap: 'wrap',
           }}>
             <StatPill label="System Memory" value={system?.ram_pct != null ? `${Math.round(system.ram_pct)}%` : '—'} sub={system ? `${system.ram_used_gb}/${system.ram_total_gb} GB` : undefined} />
@@ -784,6 +724,7 @@ export default function App() {
             <StatPill label="CPU Load"      value={system?.cpu_pct != null ? `${Math.round(system.cpu_pct)}%` : '—'} sub={system?.load_1m ? `${system.load_1m} avg` : undefined} />
             <StatPill label="Disk"          value={system?.disk_pct != null ? `${Math.round(system.disk_pct)}%` : '—'} sub={system ? `${system.disk_used_gb}/${system.disk_total_gb} GB` : undefined} warn={system?.disk_pct != null && system.disk_pct > 85} />
             <StatPill label="Mesh Online"   value={`${onlineAgents}/${agents.length || '—'}`} sub={system?.uptime_seconds ? `UP ${formatUptime(system.uptime_seconds)}` : undefined} />
+            <div style={{ pointerEvents: 'all' }}><TimelineScrubber /></div>
           </div>
 
         </div>
