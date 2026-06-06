@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
 import { useWebSocket } from './hooks/useWebSocket'
 import { useDashboardStore } from './store/dashboardStore'
-import type { GraphSelection, SignalWatcherState } from './types'
+import type { GraphSelection, SignalWatcherState, ServiceHealth } from './types'
 import MeshGraph from './components/MeshGraph'
 
 // ── Color palette ─────────────────────────────────────────────────────────────
@@ -609,6 +609,103 @@ function SignalWatcherWidget({ watcher }: { watcher: SignalWatcherState | null }
   )
 }
 
+// ── OS notifications ─────────────────────────────────────────────────────────
+
+function useServiceNotifications() {
+  const services = useDashboardStore((s) => s.services)
+  const prevRef = useRef<Record<string, string>>({})
+  const lastFiredRef = useRef<Record<string, number>>({})
+  const DEBOUNCE_MS = 60_000
+
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    const prev = prevRef.current
+    const now = Date.now()
+    for (const [key, svc] of Object.entries(services) as [string, ServiceHealth][]) {
+      const newStatus = svc.status
+      const oldStatus = prev[key]
+      if (oldStatus && oldStatus !== newStatus && (newStatus === 'down' || newStatus === 'degraded')) {
+        const lastFired = lastFiredRef.current[key] ?? 0
+        if (now - lastFired >= DEBOUNCE_MS) {
+          new Notification(`Mesh alert: ${svc.name ?? key}`, {
+            body: `Status changed to ${newStatus.toUpperCase()}`,
+            tag: key,
+          })
+          lastFiredRef.current[key] = now
+        }
+      }
+      prev[key] = newStatus
+    }
+    prevRef.current = { ...prev }
+  }, [services])
+}
+
+// ── Timeline scrubber ────────────────────────────────────────────────────────
+
+function TimelineScrubber() {
+  const [replayMode, setReplayMode] = useState(false)
+  const [replayLabel, setReplayLabel] = useState<string | null>(null)
+  const [sliderVal, setSliderVal] = useState(100)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const fetchSnapshot = useCallback(async (pct: number) => {
+    if (pct >= 100) { setReplayMode(false); setReplayLabel(null); return }
+    const now = Date.now()
+    const earliest = now - 24 * 60 * 60 * 1000
+    const targetMs = earliest + (pct / 100) * (now - earliest)
+    const t = new Date(targetMs).toISOString()
+    try {
+      const res = await fetch(`/api/history?t=${encodeURIComponent(t)}`)
+      const data = await res.json()
+      if (data.snapshot) {
+        setReplayMode(true)
+        setReplayLabel(new Date(data.snapshot.ts).toLocaleTimeString())
+      }
+    } catch { /* silent */ }
+  }, [])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Number(e.target.value)
+    setSliderVal(val)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => fetchSnapshot(val), 300)
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '4px 10px',
+      border: `1px solid ${replayMode ? 'rgba(240,192,64,0.4)' : 'rgba(160,100,255,0.14)'}`,
+      background: replayMode ? 'rgba(20,12,2,0.55)' : 'rgba(8,4,16,0.36)',
+      transition: 'border-color 0.2s, background 0.2s',
+    }}>
+      <span style={{ fontSize: 9, letterSpacing: '0.16em', color: replayMode ? C.amber : C.dim, textTransform: 'uppercase', whiteSpace: 'nowrap', minWidth: 48 }}>
+        {replayMode ? `↩ ${replayLabel ?? '…'}` : 'Live'}
+      </span>
+      <input
+        type="range" min={0} max={100} value={sliderVal}
+        onChange={handleChange}
+        style={{ width: 120, accentColor: replayMode ? C.amber : C.teal, cursor: 'pointer' }}
+        title="Drag left to replay mesh history (24h)"
+      />
+      {replayMode && (
+        <button
+          onClick={() => { setSliderVal(100); setReplayMode(false); setReplayLabel(null) }}
+          style={{ fontSize: 9, color: C.amber, background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase', padding: 0 }}
+        >
+          ← Live
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -617,6 +714,8 @@ export default function App() {
   const agents = useDashboardStore((s) => s.agents)
   const signalWatcher = useDashboardStore((s) => s.signalWatcher)
   const [graphSelection, setGraphSelection] = useState<GraphSelection | null>(null)
+
+  useServiceNotifications()
 
   const onlineAgents = agents.filter((a) => ['online', 'active', 'busy'].includes(a.status)).length
 
@@ -663,6 +762,7 @@ export default function App() {
                 <OpsStrip onSelect={setGraphSelection} />
                 <AlertsLine />
                 <OpsUtilityBlock onSelect={setGraphSelection} />
+                <TimelineScrubber />
               </div>
             </div>
             <div style={{ flex: 1.1, display: 'flex', justifyContent: 'flex-end', pointerEvents: 'all' }}>
