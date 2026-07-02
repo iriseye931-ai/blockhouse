@@ -7,11 +7,11 @@
   --mc-bg-soft: #0f0820;
   --mc-surface: #160e2a;
   --mc-surface-2: #0d0619;
-  --mc-border: #3a2460;
-  --mc-border-soft: #241550;
-  --mc-text: #f4eeff;
-  --mc-text-soft: #9b85c8;
-  --mc-text-dim: #4a3568;
+  --mc-border: #33314a;
+  --mc-border-soft: #232132;
+  --mc-text: #f2f1f7;
+  --mc-text-soft: #a29db8;
+  --mc-text-dim: #575370;
   --mc-accent: #b580ff;
   --mc-accent-soft: rgba(181, 128, 255, 0.12);
   background: var(--mc-bg);
@@ -64,7 +64,7 @@ html, body, #root {
 }
 
 body {
-  font-family: "Orbitron", "Eurostile", "Bank Gothic", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background:
@@ -89,7 +89,11 @@ input {
 
 button:hover:not(:disabled),
 select:hover:not(:disabled) {
-  border-color: #6a3a88 !important;
+  border-color: #4c4868 !important;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 button:focus-visible,
@@ -97,7 +101,7 @@ textarea:focus-visible,
 select:focus-visible,
 input:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 1px rgba(181, 128, 255, 0.42), 0 0 18px rgba(181, 128, 255, 0.1);
+  box-shadow: 0 0 0 1px rgba(181, 128, 255, 0.42);
 }
 
 details > summary {
@@ -118,16 +122,16 @@ details[open] {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0516;
+  background: #0a0812;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3a1f60;
+  background: #363248;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5a3080;
+  background: #4c4868;
 }
 
 @keyframes bubble-in {

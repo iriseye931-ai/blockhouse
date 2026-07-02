@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented here.
 
+## v0.4.0 - 2026-07-01
+
+### LEGO mission control (fun pass)
+- Crew rendered as proper LEGO minifigs: stud heads, classic grins, claw hands, flared torsos, chest panels with live status LEDs
+- The Big Board: NASA-style front screen with shift clock, orbit trace, live event ticker, and a GO/NO-GO board mapping real service health to flight-controller callsigns (VIKING, MEMORY, COMMS, MLX-35...)
+- Celebrations: finished tasks raise the minifig's arms and drop LEGO-brick confetti
+- LEGO baseplate floor with perspective studs; mission plaques (v0.1-v0.4) on the wall
+- Desk details: studs, coffee mug
+
+### Design-taste pass
+- Orbitron replaced with Geist for all UI text (Fira Code stays for data)
+- Chrome neutralized: slate borders/dim text, ambient glows removed, diffusion shadows
+- Identity colors (Atlas violet, Hermes amber) now the only accents; status colors semantic-only
+- Tactile :active states on buttons
+
 ## v0.3.0 - 2026-07-01
 
 ### Crew stage (replaces the mesh sphere)

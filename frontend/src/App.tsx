@@ -8,12 +8,12 @@ import AgentInbox from './components/AgentInbox'
 // ── Color palette ─────────────────────────────────────────────────────────────
 
 const C = {
-  text: '#f4eeff',
-  soft: '#9b85c8',
-  dim: '#4a3568',
-  cyan: '#e8d8ff',
+  text: '#f2f1f7',
+  soft: '#a29db8',
+  dim: '#575370',
+  cyan: '#e8e6f0',
   teal: '#b580ff',
-  // status — canonical; keep in sync with MeshGraph STATUS_COLORS
+  // status — canonical; keep in sync with CrewStage STATUS colors
   green: '#79ff98',
   amber: '#f0c040',
   red: '#ff7060',
@@ -147,7 +147,6 @@ function ClockDot({ isConnected }: { isConnected: boolean }) {
         <span style={{
           width: 6, height: 6, borderRadius: '50%',
           background: isConnected && live ? C.teal : C.dim,
-          boxShadow: isConnected && live ? `0 0 8px ${C.teal}` : 'none',
           animation: !isConnected ? 'link-blink 1.4s ease-in-out infinite' : undefined,
         }} />
         <span style={{ fontSize: 18, color: C.text, letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums', fontFamily: '"Fira Code", monospace' }}>
@@ -216,7 +215,7 @@ function MeshStatusBar({ onSelect }: { onSelect: (s: GraphSelection) => void }) 
   if (alerts.length === 0) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px' }}>
-        <span style={{ width: 4, height: 4, borderRadius: '50%', background: C.green, boxShadow: `0 0 6px ${C.green}` }} />
+        <span style={{ width: 4, height: 4, borderRadius: '50%', background: C.green }} />
         <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Mesh nominal</span>
       </div>
     )
@@ -240,7 +239,7 @@ function MeshStatusBar({ onSelect }: { onSelect: (s: GraphSelection) => void }) 
             background: 'transparent', border: 'none', padding: 0, cursor: alert.sel ? 'pointer' : 'default',
           }}
         >
-          <span style={{ width: 4, height: 4, borderRadius: '50%', background: alert.tone, boxShadow: `0 0 5px ${alert.tone}`, flexShrink: 0 }} />
+          <span style={{ width: 4, height: 4, borderRadius: '50%', background: alert.tone, flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: alert.tone, letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 260 }}>
             {alert.text}
           </span>
@@ -264,7 +263,7 @@ function StatPill({ label, value, sub, warn }: { label: string; value: string; s
     ? '#ffb04d'
     : numericPct != null && numericPct > 70
       ? C.amber
-      : '#7ee8ff'
+      : C.text
   const [pulsing, setPulsing] = useState(false)
   const prevValue = useRef(value)
   useEffect(() => {
@@ -281,7 +280,7 @@ function StatPill({ label, value, sub, warn }: { label: string; value: string; s
       display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
       padding: '6px 14px 7px',
       borderRadius: 0,
-      border: `1px solid ${warn || (numericPct != null && numericPct > 85) ? 'rgba(255,176,77,0.44)' : numericPct != null && numericPct > 70 ? 'rgba(240,192,64,0.4)' : 'rgba(100,210,255,0.34)'}`,
+      border: `1px solid ${warn || (numericPct != null && numericPct > 85) ? 'rgba(255,176,77,0.44)' : numericPct != null && numericPct > 70 ? 'rgba(240,192,64,0.4)' : 'rgba(150,146,172,0.22)'}`,
       background: 'rgba(10,5,22,0.74)',
       backdropFilter: 'blur(14px)',
       WebkitBackdropFilter: 'blur(14px)',
@@ -421,7 +420,7 @@ export default function App() {
           'linear-gradient(180deg, #07030f 0%, #04010a 100%)',
         ].join(', '),
         color: C.text,
-        fontFamily: '"Orbitron", ui-sans-serif, system-ui, sans-serif',
+        fontFamily: '"Geist", ui-sans-serif, system-ui, sans-serif',
       }}
     >
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
