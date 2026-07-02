@@ -175,7 +175,7 @@ function CommandHeader({ onlineAgents, totalAgents }: { onlineAgents: number; to
         Mission Control
       </div>
       <div style={{ fontSize: 19, color: C.soft, letterSpacing: '0.09em', textTransform: 'uppercase' }}>
-        Agent Mesh
+        Blockhouse
       </div>
       <div style={{ fontSize: 11, color: C.dim, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
         {onlineAgents}/{totalAgents || 0} online
