@@ -12,7 +12,7 @@ Real-time dashboard for multi-agent AI systems — built for the **Claude Code +
 
 ![Mission Control Demo](assets/dashboard-demo.gif)
 
-- [Download the short MP4 demo clip](assets/dashboard-demo.mp4)
+- [Download the short MP4 demo clip](assets/dashboard-demo.mp4) — CAPCOM message ▸ speech bubble ▸ task-complete confetti, all live data
 
 ---
 
