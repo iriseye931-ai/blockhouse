@@ -794,20 +794,35 @@ export default function CrewStage() {
 function CapcomConsole() {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
 
   const send = async () => {
     const message = text.trim()
     if (!message || sending) return
     setSending(true)
     try {
-      await fetch('/api/amp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipient: 'hermes', subject: 'capcom', message, type: 'notification' }),
-      })
-      setText('')
-    } catch { /* backend down — keep text so nothing is lost */ }
+      if (message.startsWith('/task ')) {
+        // /task <title> — queue real work on Hermes's kanban
+        const r = await fetch('/api/crew/task', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: message.slice(6).trim() }),
+        })
+        const d = await r.json()
+        setNote(d.ok ? `task queued ▸ ${d.task?.id ?? ''}` : `task failed: ${d.error ?? '?'}`)
+        if (d.ok) setText('')
+      } else {
+        await fetch('/api/amp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recipient: 'hermes', subject: 'capcom', message, type: 'notification' }),
+        })
+        setText('')
+        setNote(null)
+      }
+    } catch { setNote('backend unreachable') }
     setSending(false)
+    setTimeout(() => setNote(null), 6000)
   }
 
   return (
@@ -819,11 +834,20 @@ function CapcomConsole() {
       backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
     }}>
       <span style={{ fontSize: 9, letterSpacing: '0.2em', color: INK.dim, flexShrink: 0 }}>CAPCOM ▸</span>
+      {note && (
+        <span style={{
+          position: 'absolute', top: -22, left: 10, fontSize: 10,
+          fontFamily: '"Fira Code", monospace',
+          color: note.startsWith('task queued') ? '#79ff98' : '#f0c040',
+        }}>
+          {note}
+        </span>
+      )}
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') send() }}
-        placeholder="message hermes over AMP…"
+        placeholder="message hermes over AMP… (/task <title> queues kanban work)"
         style={{
           flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
           color: INK.text, fontSize: 12, fontFamily: '"Fira Code", monospace',

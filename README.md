@@ -4,8 +4,7 @@ Real-time dashboard for multi-agent AI systems — built for the **Claude Code +
 
 ![Dashboard](https://img.shields.io/badge/React_19-Vite-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-WebSockets-green) ![MLX](https://img.shields.io/badge/MLX-Qwen3.5_35B-green) ![License](https://img.shields.io/badge/license-MIT-purple)
 
-![Mission Control Dashboard](assets/dashboard-full.png)
-*(capture from v0.2 — v0.3 replaces the mesh sphere with the pixel crew stage)*
+![Mission Control Dashboard](assets/dashboard-crew.png)
 
 ---
 
@@ -19,8 +18,9 @@ Real-time dashboard for multi-agent AI systems — built for the **Claude Code +
 
 ## Visuals
 
-- [Current dashboard capture](assets/dashboard-full.png)
-- [Focused preview capture](assets/dashboard-preview.png)
+- [The crew celebrating a finished task](assets/crew-celebration.png)
+- [CAPCOM exchange over AMP](assets/capcom-reply.png)
+- [v0.2-era mesh sphere (history)](assets/dashboard-full.png)
 - [Release history](CHANGELOG.md)
 
 ---

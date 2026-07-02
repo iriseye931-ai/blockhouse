@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented here.
 
+## v0.6.0 - 2026-07-02
+
+### CAPCOM /task — the dashboard can task the crew
+- `/task <title>` in the CAPCOM console creates a real task on Hermes's kanban (`hermes kanban create`, created-by mission-control); gateway dispatcher picks it up
+- Task-queued confirmation above the console + ops-log event
+- Fresh screenshots: crew stage hero, celebration, CAPCOM exchange
+
 ## v0.5.0 - 2026-07-02
 
 ### Useful + fun (interactive console)

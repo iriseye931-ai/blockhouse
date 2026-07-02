@@ -166,6 +166,41 @@ async def get_crew():
     return {"crew": _crew, "events": list(_crew_events)}
 
 
+@router.post("/api/crew/task")
+async def crew_task(payload: dict = Body(...)):
+    """CAPCOM /task — queue real work on Hermes's kanban via the hermes CLI."""
+    import os
+    import subprocess
+    title = str(payload.get("title") or "").strip()
+    if not title:
+        return {"ok": False, "error": "title required"}
+    if len(title) > 300:
+        return {"ok": False, "error": "title too long (300 max)"}
+    hermes_bin = os.getenv("HERMES_BIN_PATH", str(Path.home() / ".local" / "bin" / "hermes"))
+    env = {**os.environ, "PATH": f"{Path.home() / '.local' / 'bin'}:{os.environ.get('PATH', '')}"}
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: subprocess.run(
+                [hermes_bin, "kanban", "create", title,
+                 "--created-by", "mission-control", "--json"],
+                capture_output=True, text=True, timeout=20, env=env,
+            ),
+        )
+        if result.returncode != 0:
+            return {"ok": False, "error": (result.stderr or result.stdout).strip()[:300]}
+        try:
+            task = json.loads(result.stdout.strip())
+        except Exception:
+            task = {"raw": result.stdout.strip()[:200]}
+        task_id = task.get("id") or task.get("task_id") or "?"
+        await _emit("hermes", "lifecycle", f"task queued: {title[:80]} [{task_id}]",
+                    meta={"task_id": str(task_id)})
+        return {"ok": True, "task": task}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
 # ---------------------------------------------------------------------------
 # Hermes — agent.log tail
 # ---------------------------------------------------------------------------
