@@ -69,25 +69,20 @@ Claude Code hook config (goes in `~/.claude/settings.json`, one entry per event)
 ```bash
 git clone https://github.com/iriseye931-ai/blockhouse
 cd blockhouse
-docker-compose up --build
+
+# backend — run from the repo root (package imports)
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# frontend (second terminal)
+cd frontend && npm install && npm run dev
 ```
 
 - Dashboard: http://localhost:3000
 - Backend API: http://localhost:8000
 - WebSocket: `ws://localhost:8000/ws`
 
-**Manual setup:**
-
-```bash
-# backend — run from the repo root (package imports)
-cd backend && pip install -r requirements.txt && cd ..
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
-
-# frontend
-cd frontend && npm install && npm run dev
-```
-
-The backend starts polling local services immediately; the crew stage lights up as soon as hook events arrive.
+The backend starts polling local services immediately; the crew stage lights up as soon as hook events arrive. `docker-compose up --build` also works, but the two-process path above is the one exercised daily.
 
 ---
 
