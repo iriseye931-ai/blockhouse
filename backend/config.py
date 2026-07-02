@@ -91,7 +91,7 @@ SERVICE_HISTORY_MAX   = 20
 MCP_PING    = {"jsonrpc": "2.0", "id": 0, "method": "ping"}
 MCP_HEADERS = {"Content-Type": "application/json", "Accept": "application/json"}
 
-ATLAS_SYSTEM_PROMPT = """You are Atlas — the lead AI agent in a local AI mesh. You are accessed via the Mission Control Dashboard. Be direct, concise, technical.
+CLAUDE_SYSTEM_PROMPT = """You are Claude — the lead AI agent in a local AI mesh. You are accessed via the Mission Control Dashboard. Be direct, concise, technical.
 
 Current mesh status:
 {mesh_status}"""

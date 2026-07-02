@@ -2,7 +2,7 @@
 Crew router — real-time per-agent activity pipeline.
 
 Three real data sources, no simulation:
-  * Atlas: Claude Code hooks POST to /api/crew/hook (SessionStart, PreToolUse, ...)
+  * Claude: Claude Code hooks POST to /api/crew/hook (SessionStart, PreToolUse, ...)
   * Hermes: tail of ~/.hermes/logs/agent.log (conversation loop + tool executor lines)
   * Speech: new AMP messages between agents become speech-bubble events
 
@@ -56,7 +56,7 @@ def _blank_member(name: str, role: str, model: str) -> dict[str, Any]:
 
 
 _crew: dict[str, dict[str, Any]] = {
-    "atlas": _blank_member("Atlas", "Lead — Claude Code", "fable-5"),
+    "claude": _blank_member("Claude", "Lead — Claude Code", "fable-5"),
     "hermes": _blank_member("Hermes", "Runner — MLX local", "qwen3.6-35b"),
 }
 
@@ -105,7 +105,7 @@ async def _broadcast_crew(event: dict | None = None) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Atlas — Claude Code hook receiver
+# Claude — Claude Code hook receiver
 # ---------------------------------------------------------------------------
 
 def _summarize_tool(tool_name: str, tool_input: dict) -> str:
@@ -130,33 +130,33 @@ def _summarize_tool(tool_name: str, tool_input: dict) -> str:
 
 @router.post("/api/crew/hook")
 async def crew_hook(payload: dict = Body(...)):
-    """Receiver for Claude Code hook events (Atlas activity)."""
+    """Receiver for Claude Code hook events (Claude activity)."""
     hook = payload.get("hook_event_name", "")
     tool_name = payload.get("tool_name") or ""
     tool_input = payload.get("tool_input") or {}
     cwd = payload.get("cwd") or ""
     project = Path(cwd).name if cwd else None
     if project:
-        _crew["atlas"]["task"] = project
+        _crew["claude"]["task"] = project
 
     if hook == "SessionStart":
-        await _emit("atlas", "lifecycle", f"session started in {project or '~'}",
+        await _emit("claude", "lifecycle", f"session started in {project or '~'}",
                     status="thinking")
     elif hook == "UserPromptSubmit":
-        await _emit("atlas", "thought", "reading Iris's prompt", status="thinking")
+        await _emit("claude", "thought", "reading Iris's prompt", status="thinking")
     elif hook == "PreToolUse":
-        await _emit("atlas", "tool", _summarize_tool(tool_name, tool_input),
+        await _emit("claude", "tool", _summarize_tool(tool_name, tool_input),
                     status="working", tool=tool_name)
     elif hook == "PostToolUse":
         # keep working state; refresh timestamp only
-        _crew["atlas"]["last_event_at"] = _now_iso()
+        _crew["claude"]["last_event_at"] = _now_iso()
     elif hook == "Notification":
-        await _emit("atlas", "lifecycle",
+        await _emit("claude", "lifecycle",
                     payload.get("message") or "needs attention", status="waiting")
     elif hook in ("Stop", "SubagentStop", "SessionEnd"):
-        await _emit("atlas", "lifecycle", "finished turn", status="idle")
+        await _emit("claude", "lifecycle", "finished turn", status="idle")
     else:
-        _crew["atlas"]["last_event_at"] = _now_iso()
+        _crew["claude"]["last_event_at"] = _now_iso()
 
     return {"ok": True}
 
@@ -279,7 +279,7 @@ def _resolve_agent_dirs() -> list[Path]:
         index = json.loads(index_path.read_text(encoding="utf-8"))
     except Exception:
         pass
-    for name in ("atlas", "hermes"):
+    for name in ("claude", "hermes"):
         for candidate in (AMP_AGENTS_DIR / name, AMP_AGENTS_DIR / index.get(name, "")):
             if candidate.name and candidate.is_dir() and candidate not in dirs:
                 dirs.append(candidate)
@@ -298,7 +298,7 @@ def _amp_inbox_files() -> list[Path]:
 
 
 async def run_amp_watch() -> None:
-    """Emits a speech event whenever a new AMP message lands in atlas/hermes boxes."""
+    """Emits a speech event whenever a new AMP message lands in claude/hermes boxes."""
     seen: set[str] = {p.name for p in _amp_inbox_files()}
     while True:
         try:

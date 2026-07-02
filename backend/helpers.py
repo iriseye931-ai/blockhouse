@@ -40,7 +40,7 @@ from .config import (
     PROJECTS_DIR, OPENVIKING_PLIST, OV_LOCK_PATH, OV_PID_PATH,
     HTTP_TIMEOUT, POLL_INTERVAL, BRIEF_REFRESH_HOURS,
     OV_WATCHDOG_INTERVAL, OV_RESTART_COOLDOWN, SERVICE_HISTORY_MAX,
-    MCP_PING, MCP_HEADERS, ATLAS_SYSTEM_PROMPT,
+    MCP_PING, MCP_HEADERS, CLAUDE_SYSTEM_PROMPT,
     ROUTINE_KEYWORDS, SPECIALIZED_KEYWORDS, PREMIUM_KEYWORDS, CODE_KEYWORDS,
     MESH_PORTS,
 )
@@ -157,7 +157,7 @@ def _build_routing_summary(
 
     routine_agent = (local_default or {}).get("name") or "hermes"
     specialized_agent = specialized[0].get("name") if specialized else routine_agent
-    premium_agent = available_premium[0].get("name") if available_premium else (premium_pool[0].get("name") if premium_pool else "atlas")
+    premium_agent = available_premium[0].get("name") if available_premium else (premium_pool[0].get("name") if premium_pool else "claude")
     hermes_profiles = (local_default or {}).get("local_profiles") if (local_default or {}).get("name") == "hermes" else []
     profile_guidance = _preferred_hermes_profile_guidance(hermes_profiles or [])
     return {
@@ -1502,9 +1502,9 @@ async def _fetch_service_health(client: httpx.AsyncClient) -> dict[str, Any]:
 # Core mesh agents — always shown, status detected from live processes/services
 MESH_AGENTS = [
     {
-        "id": "atlas",
-        "name": "atlas",
-        "label": "Atlas",
+        "id": "claude",
+        "name": "claude",
+        "label": "Claude",
         "role": "Lead Role",
         "model": "Premium Lead Pool",
         "color": "#06b6d4",
@@ -1514,7 +1514,7 @@ MESH_AGENTS = [
         "default_for": [],
         "reserve_for": ["planning", "ambiguous debugging", "tricky refactors", "final review"],
         "fallback_to": "hermes",
-        "detect": None,  # always online — we are Atlas
+        "detect": None,  # always online — we are Claude
     },
     {
         "id": "hermes",
@@ -1568,9 +1568,9 @@ async def _fetch_agents(client: httpx.AsyncClient) -> list[dict[str, Any]]:
 
     agents = []
     for key, defn in defs_by_name.items():
-        if key == "atlas":
+        if key == "claude":
             runtime_status = "online"
-            task = "Atlas lead role — Claude Code (Fable 5)"
+            task = "Claude lead role — Claude Code (Fable 5)"
         elif defn["detect"] and await _is_process_running(defn["detect"]):
             runtime_status = "online"
             task = None
@@ -2029,12 +2029,12 @@ def _fetch_logs(n: int = 60) -> dict[str, list[str]]:
 
 
 def _fetch_amp_messages() -> list[dict]:
-    """Read recent AMP messages for atlas (inbox + sent)."""
+    """Read recent AMP messages for claude (inbox + sent)."""
     messages = []
     try:
-        atlas_dir = AMP_AGENTS_DIR / "atlas" / "messages"
+        claude_dir = AMP_AGENTS_DIR / "claude" / "messages"
         for folder in ("inbox", "sent"):
-            folder_path = atlas_dir / folder
+            folder_path = claude_dir / folder
             if not folder_path.exists():
                 continue
             for subdir in folder_path.iterdir():
@@ -2256,17 +2256,17 @@ def _fetch_agent_last_active(hermes_status: dict, amp_messages: list) -> dict[st
                 pass
     result["hermes"] = hermes_ts
 
-    # Atlas: latest Claude session file mtime (sessions are .jsonl under projects/)
-    atlas_ts = None
+    # Claude: latest Claude session file mtime (sessions are .jsonl under projects/)
+    claude_ts = None
     try:
         from datetime import timezone as _tz
         projects_dir = Path.home() / ".claude" / "projects"
         files = sorted(projects_dir.rglob("*.jsonl"), key=lambda f: f.stat().st_mtime, reverse=True)
         if files:
-            atlas_ts = datetime.fromtimestamp(files[0].stat().st_mtime, tz=_tz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            claude_ts = datetime.fromtimestamp(files[0].stat().st_mtime, tz=_tz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     except Exception:
         pass
-    result["atlas"] = atlas_ts
+    result["claude"] = claude_ts
 
 
     return result
@@ -2546,7 +2546,7 @@ async def _generate_brief(force: bool = False) -> str:
         {
             "role": "system",
             "content": (
-                "You are Atlas, lead AI agent. Generate a concise morning brief for Punch "
+                "You are Claude, lead AI agent. Generate a concise morning brief for Punch "
                 "(the operator). Cover: what changed overnight, what needs attention, "
                 "what's healthy. Be direct and specific. Max 200 words. No fluff."
             ),
@@ -2649,8 +2649,8 @@ def _ov_headers() -> dict:
         h["Authorization"] = f"Bearer {OPENVIKING_KEY}"
     return h
 
-def _build_atlas_messages(req: "ChatRequest") -> list[dict]:
-    """Build OpenAI-format messages for Atlas chat."""
+def _build_claude_messages(req: "ChatRequest") -> list[dict]:
+    """Build OpenAI-format messages for Claude chat."""
     mesh_status = json.dumps(
         {
             "services": {k: v.get("status") for k, v in _state["services"].items()},
@@ -2659,7 +2659,7 @@ def _build_atlas_messages(req: "ChatRequest") -> list[dict]:
         },
         indent=2,
     )
-    system_content = ATLAS_SYSTEM_PROMPT.format(mesh_status=mesh_status)
+    system_content = CLAUDE_SYSTEM_PROMPT.format(mesh_status=mesh_status)
     messages: list[dict] = [{"role": "system", "content": system_content}]
     for m in req.history[-10:]:
         messages.append({"role": m.role, "content": m.content})

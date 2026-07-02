@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from .. import state as _st
 from ..state import _state, _brief_cache
-from ..helpers import _build_atlas_messages, _mlx_chat_stream, _mlx_chat_complete, _generate_brief
+from ..helpers import _build_claude_messages, _mlx_chat_stream, _mlx_chat_complete, _generate_brief
 from ..config import WHISPER_STT_URL
 
 router = APIRouter()
@@ -31,7 +31,7 @@ class TTSRequest(BaseModel):
 async def api_chat(req: ChatRequest):
     if _state.get("llm_active") != "mlx":
         return {"error": "MLX server unavailable — start it with `mlx-server`", "mlx_down": True}
-    messages = _build_atlas_messages(req)
+    messages = _build_claude_messages(req)
     text = await _mlx_chat_complete(messages)
     if text.startswith("[MLX unavailable"):
         return {"error": text, "mlx_down": True}
@@ -48,7 +48,7 @@ async def api_chat_stream(req: ChatRequest):
             yield "data: [DONE]\n\n"
         return StreamingResponse(_fallback_stream(), media_type="text/event-stream")
 
-    messages = _build_atlas_messages(req)
+    messages = _build_claude_messages(req)
     return StreamingResponse(
         _mlx_chat_stream(messages),
         media_type="text/event-stream",

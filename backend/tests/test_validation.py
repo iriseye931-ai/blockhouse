@@ -214,7 +214,7 @@ class TestRoutingValidation:
             "Summarize the latest mesh status",
             [
                 {"name": "hermes", "routing_group": "local-default"},
-                {"name": "atlas", "routing_group": "premium-pool", "runtime_status": "online"},
+                {"name": "claude", "routing_group": "premium-pool", "runtime_status": "online"},
             ],
         )
         assert rec["recommended_agent"] == "hermes"
@@ -224,12 +224,10 @@ class TestRoutingValidation:
             "Plan the architecture and review this refactor",
             [
                 {"name": "hermes", "routing_group": "local-default"},
-                {"name": "atlas", "routing_group": "premium-pool", "runtime_status": "online", "activity_status": "live"},
-                {"name": "claude", "routing_group": "premium-pool", "runtime_status": "offline", "activity_status": "stale"},
+                {"name": "claude", "routing_group": "premium-pool", "runtime_status": "online", "activity_status": "live"},
             ],
         )
-        assert rec["recommended_agent"] == "atlas"
-        assert rec["fallback_agent"] == "claude"
+        assert rec["recommended_agent"] == "claude"
 
     def test_recommend_route_prefers_sidecar_for_summary_work(self):
         rec = _recommend_route(
@@ -281,7 +279,7 @@ class TestRoutingValidation:
                         {"name": "profile:mesh-reasoning", "display_name": "mesh-reasoning", "hermes_profile": "mesh-reasoning"},
                     ],
                 },
-                {"name": "atlas", "routing_group": "premium-pool", "availability_status": "available"},
+                {"name": "claude", "routing_group": "premium-pool", "availability_status": "available"},
             ],
             {},
             {"status": "up", "primary_cause": {"kind": "healthy"}},
@@ -310,7 +308,7 @@ class TestTaskSubmitEndpoint:
             "premium_available": [],
         })
         monkeypatch.setitem(main_mod._state, "agents", [
-            {"name": "atlas", "routing_group": "premium-pool"},
+            {"name": "claude", "routing_group": "premium-pool"},
             {"name": "claude", "routing_group": "premium-pool"},
             {"name": "hermes", "routing_group": "local-default"},
         ])
@@ -779,7 +777,7 @@ class TestPermissionAudit:
 
         r = client.post("/api/permissions/audit", json={
             "source": "codex",
-            "agent": "atlas",
+            "agent": "claude",
             "tool": "exec_command",
             "decision": "allow",
             "mode": "default",

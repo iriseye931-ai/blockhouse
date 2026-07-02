@@ -25,13 +25,13 @@ interface AgentSkin {
 }
 
 const SKINS: Record<string, AgentSkin> = {
-  atlas: { accent: '#8f5cff', accentShade: '#6a3fd0', glow: 'rgba(143,92,255,0.5)' },
+  claude: { accent: '#8f5cff', accentShade: '#6a3fd0', glow: 'rgba(143,92,255,0.5)' },
   hermes: { accent: '#f0a821', accentShade: '#c4830f', glow: 'rgba(240,168,33,0.5)' },
 }
 
-// Anchor positions as fractions of the canvas (Atlas left, Hermes right)
+// Anchor positions as fractions of the canvas (Claude left, Hermes right)
 const ANCHORS: Record<string, { x: number; y: number; flip: boolean }> = {
-  atlas: { x: 0.25, y: 0.60, flip: false },
+  claude: { x: 0.25, y: 0.60, flip: false },
   hermes: { x: 0.75, y: 0.60, flip: true },
 }
 
@@ -416,9 +416,9 @@ function drawWaitingMark(ctx: CanvasRenderingContext2D, cx: number, groundY: num
 /** Data beam between consoles when someone is talking. */
 function drawLinkBeam(ctx: CanvasRenderingContext2D, w: number, groundY: number, t: number, from: string) {
   const y = groundY - 16 * PX
-  const x0 = w * (from === 'atlas' ? ANCHORS.atlas.x : ANCHORS.hermes.x)
-  const x1 = w * (from === 'atlas' ? ANCHORS.hermes.x : ANCHORS.atlas.x)
-  const skin = SKINS[from] ?? SKINS.atlas
+  const x0 = w * (from === 'claude' ? ANCHORS.claude.x : ANCHORS.hermes.x)
+  const x1 = w * (from === 'claude' ? ANCHORS.hermes.x : ANCHORS.claude.x)
+  const skin = SKINS[from] ?? SKINS.claude
   for (let i = 0; i < 5; i++) {
     const p = ((t * 0.55 + i / 5) % 1)
     const x = x0 + (x1 - x0) * p
@@ -435,13 +435,13 @@ function drawLinkBeam(ctx: CanvasRenderingContext2D, w: number, groundY: number,
 interface Bubble { agent: string; text: string; until: number }
 
 function SpeechBubble({ bubble, side }: { bubble: Bubble; side: 'left' | 'right' }) {
-  const skin = SKINS[bubble.agent] ?? SKINS.atlas
+  const skin = SKINS[bubble.agent] ?? SKINS.claude
   return (
     <div style={{
       position: 'absolute',
       bottom: 'calc(34% + 170px)',
       ...(side === 'left'
-        ? { left: `calc(${ANCHORS.atlas.x * 100}% - 130px)` }
+        ? { left: `calc(${ANCHORS.claude.x * 100}% - 130px)` }
         : { right: `calc(${(1 - ANCHORS.hermes.x) * 100}% - 130px)` }),
       maxWidth: 260,
       padding: '9px 12px',
@@ -470,14 +470,14 @@ function SpeechBubble({ bubble, side }: { bubble: Bubble; side: 'left' | 'right'
 }
 
 function StatusPlate({ member, id, side }: { member: CrewMember; id: string; side: 'left' | 'right' }) {
-  const skin = SKINS[id] ?? SKINS.atlas
+  const skin = SKINS[id] ?? SKINS.claude
   const statusColor = STATUS[member.status] ?? STATUS.idle
   return (
     <div style={{
       position: 'absolute',
       top: 'min(calc(66% + 40px), calc(100% - 132px))',
       ...(side === 'left'
-        ? { left: `calc(${ANCHORS.atlas.x * 100}% - 125px)` }
+        ? { left: `calc(${ANCHORS.claude.x * 100}% - 125px)` }
         : { right: `calc(${(1 - ANCHORS.hermes.x) * 100}% - 125px)` }),
       width: 250,
       padding: '10px 14px 12px',
@@ -532,7 +532,7 @@ const KIND_GLYPH: Record<CrewEvent['kind'], string> = {
   tool: '⚙', thought: '◌', speech: '▸', lifecycle: '●', hook: '·',
 }
 
-const OPS_FILTERS = ['all', 'atlas', 'hermes', 'speech'] as const
+const OPS_FILTERS = ['all', 'claude', 'hermes', 'speech'] as const
 
 export function OpsLog() {
   const allEvents = useDashboardStore((s) => s.crewEvents)
@@ -580,7 +580,7 @@ export function OpsLog() {
           </div>
         )}
         {events.slice(0, 60).map((e) => {
-          const skin = SKINS[e.agent] ?? SKINS.atlas
+          const skin = SKINS[e.agent] ?? SKINS.claude
           return (
             <div key={e.id} style={{ display: 'flex', gap: 8, padding: '3px 14px', alignItems: 'baseline' }}>
               <span style={{ fontSize: 9, color: INK.dim, fontVariantNumeric: 'tabular-nums', fontFamily: '"Fira Code", monospace', flexShrink: 0 }}>
@@ -627,7 +627,7 @@ export default function CrewStage() {
     const x = e.clientX - r.left, y = e.clientY - r.top
     const w = canvas.width, groundY = canvas.height * 0.66
 
-    for (const id of ['atlas', 'hermes'] as const) {
+    for (const id of ['claude', 'hermes'] as const) {
       const ax = w * ANCHORS[id].x
       if (Math.abs(x - ax) < 60 && y > groundY - 24 * PX - 20 && y < groundY + 12) {
         waveRef.current[id] = Date.now() + 1800
@@ -719,7 +719,7 @@ export default function CrewStage() {
         state.crewEvents[0] ? `${state.crewEvents[0].agent}: ${state.crewEvents[0].text}` : '',
       )
 
-      for (const id of ['atlas', 'hermes']) {
+      for (const id of ['claude', 'hermes']) {
         const member = liveCrew[id]
         const status: CrewStatus = member?.status ?? 'idle'
         const anchor = ANCHORS[id]
@@ -754,11 +754,11 @@ export default function CrewStage() {
       <canvas ref={canvasRef} onClick={handleStageClick} style={{ position: 'absolute', inset: 0, cursor: 'pointer' }} />
 
       {Object.values(bubbles).map((b) => (
-        <SpeechBubble key={b.agent} bubble={b} side={b.agent === 'atlas' ? 'left' : 'right'} />
+        <SpeechBubble key={b.agent} bubble={b} side={b.agent === 'claude' ? 'left' : 'right'} />
       ))}
 
-      {(['atlas', 'hermes'] as const).map((id) =>
-        crew[id] ? <StatusPlate key={id} member={crew[id]} id={id} side={id === 'atlas' ? 'left' : 'right'} /> : null
+      {(['claude', 'hermes'] as const).map((id) =>
+        crew[id] ? <StatusPlate key={id} member={crew[id]} id={id} side={id === 'claude' ? 'left' : 'right'} /> : null
       )}
 
       {/* Service detail popover — opens from a GO/NO-GO cell */}
