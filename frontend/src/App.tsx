@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, type CSSProperties } from 're
 import { useWebSocket } from './hooks/useWebSocket'
 import { useDashboardStore } from './store/dashboardStore'
 import type { GraphSelection, SignalWatcherState, ServiceHealth } from './types'
-import CrewStage from './components/CrewStage'
+import CrewStage, { OpsLog } from './components/CrewStage'
 import AgentInbox from './components/AgentInbox'
 
 // ── Color palette ─────────────────────────────────────────────────────────────
@@ -278,17 +278,19 @@ function StatPill({ label, value, sub, warn }: { label: string; value: string; s
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-      padding: '6px 14px 7px',
+      padding: '5px 12px 6px',
       borderRadius: 0,
       border: `1px solid ${warn || (numericPct != null && numericPct > 85) ? 'rgba(255,176,77,0.44)' : numericPct != null && numericPct > 70 ? 'rgba(240,192,64,0.4)' : 'rgba(150,146,172,0.22)'}`,
-      background: 'rgba(10,5,22,0.74)',
+      background: 'rgba(10,7,20,0.74)',
       backdropFilter: 'blur(14px)',
       WebkitBackdropFilter: 'blur(14px)',
-      minWidth: 100,
+      minWidth: 96,
     }}>
-      <span style={{ fontSize: 10, letterSpacing: '0.2em', color: C.soft, textTransform: 'uppercase', marginBottom: 3 }}>{label}</span>
-      <span style={{ fontSize: 24, color: accent, fontWeight: 700, letterSpacing: '0.04em', lineHeight: 1, fontFamily: '"Fira Code", monospace', animation: pulsing ? 'stat-pulse 0.4s ease-out' : undefined }}>{value}</span>
-      {sub && <span style={{ fontSize: 10, color: C.dim, letterSpacing: '0.1em', marginTop: 3 }}>{sub}</span>}
+      <span style={{ fontSize: 8.5, letterSpacing: '0.18em', color: C.soft, textTransform: 'uppercase', marginBottom: 2, whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <span style={{ fontSize: 17, color: accent, fontWeight: 700, letterSpacing: '0.04em', lineHeight: 1, fontFamily: '"Fira Code", monospace', animation: pulsing ? 'stat-pulse 0.4s ease-out' : undefined }}>{value}</span>
+        {sub && <span style={{ fontSize: 9, color: C.dim, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{sub}</span>}
+      </span>
     </div>
   )
 }
@@ -423,59 +425,59 @@ export default function App() {
         fontFamily: '"Geist", ui-sans-serif, system-ui, sans-serif',
       }}
     >
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <VolumetricFog />
+      <FloatingParticles />
 
-        <VolumetricFog />
-        <CrewStage />
-        <FloatingParticles />
+      {/* Grid zones — rails and strips own their space; nothing overlaps by construction */}
+      <div style={{
+        position: 'relative', zIndex: 4,
+        display: 'grid',
+        width: '100%', height: '100%',
+        gridTemplateColumns: 'minmax(280px, 320px) 1fr minmax(280px, 320px)',
+        gridTemplateRows: '60px 1fr 64px',
+        gridTemplateAreas: `
+          "header header header"
+          "log    stage  inbox"
+          "footer footer footer"
+        `,
+        gap: '0 12px',
+        padding: '0 16px',
+      }}>
 
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 4 }}>
-
-          {/* Top bar — left: identity / center: single alert bar / right: clock dot */}
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-            padding: '14px 20px 0',
-            gap: 16,
-          }}>
-            <div style={{ pointerEvents: 'all' }}>
-              <CommandHeader onlineAgents={onlineAgents} totalAgents={agents.length} />
-            </div>
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', paddingTop: 6, pointerEvents: 'all' }}>
-              <MeshStatusBar onSelect={setGraphSelection} />
-            </div>
-            <div style={{ pointerEvents: 'all' }}>
-              <ClockDot isConnected={isConnected} />
-            </div>
+        {/* Header — identity | alerts | clock */}
+        <div style={{ gridArea: 'header', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, minWidth: 0 }}>
+          <CommandHeader onlineAgents={onlineAgents} totalAgents={agents.length} />
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 0 }}>
+            <MeshStatusBar onSelect={setGraphSelection} />
           </div>
-
-          {/* Right rail — agent inbox */}
-          <div style={{ position: 'absolute', top: 64, right: 20, pointerEvents: 'all' }}>
-            <AgentInbox />
-          </div>
-
-          {/* Bottom strip — hover to reveal */}
-          <div
-            style={{
-              position: 'absolute', bottom: 16, left: 0, right: 0,
-              display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10,
-              flexWrap: 'wrap',
-              opacity: 0,
-              transition: 'opacity 0.25s ease',
-              pointerEvents: 'all',
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '1' }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.opacity = '0' }}
-          >
-            <StatPill label="System Memory" value={system?.ram_pct != null ? `${Math.round(system.ram_pct)}%` : '—'} sub={system ? `${system.ram_used_gb}/${system.ram_total_gb} GB` : undefined} />
-            <StatPill label="MLX Memory"    value={system?.mlx_ram_pct != null ? `${Math.round(system.mlx_ram_pct)}%` : '—'} sub={system?.mlx_ram_gb ? `${system.mlx_ram_gb} GB` : undefined} />
-            <StatPill label="CPU Load"      value={system?.cpu_pct != null ? `${Math.round(system.cpu_pct)}%` : '—'} sub={system?.load_1m ? `${system.load_1m} avg` : undefined} />
-            <StatPill label="Disk"          value={system?.disk_pct != null ? `${Math.round(system.disk_pct)}%` : '—'} sub={system ? `${system.disk_used_gb}/${system.disk_total_gb} GB` : undefined} warn={system?.disk_pct != null && system.disk_pct > 85} />
-            <StatPill label="Mesh Online"   value={`${onlineAgents}/${agents.length || '—'}`} sub={system?.uptime_seconds ? `UP ${formatUptime(system.uptime_seconds)}` : undefined} />
-            <TimelineScrubber />
-          </div>
-
+          <ClockDot isConnected={isConnected} />
         </div>
+
+        {/* Left rail — ops log */}
+        <div style={{ gridArea: 'log', minHeight: 0, padding: '4px 0 8px' }}>
+          <OpsLog />
+        </div>
+
+        {/* Center — the crew stage */}
+        <div style={{ gridArea: 'stage', minWidth: 0, minHeight: 0 }}>
+          <CrewStage />
+        </div>
+
+        {/* Right rail — agent inbox */}
+        <div style={{ gridArea: 'inbox', minHeight: 0, overflowY: 'auto', padding: '4px 0 8px', display: 'flex', justifyContent: 'flex-end' }}>
+          <AgentInbox />
+        </div>
+
+        {/* Footer — telemetry strip, always visible */}
+        <div style={{ gridArea: 'footer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, flexWrap: 'nowrap', minWidth: 0, overflow: 'hidden' }}>
+          <StatPill label="System Memory" value={system?.ram_pct != null ? `${Math.round(system.ram_pct)}%` : '—'} sub={system ? `${system.ram_used_gb}/${system.ram_total_gb} GB` : undefined} />
+          <StatPill label="MLX Memory"    value={system?.mlx_ram_pct != null ? `${Math.round(system.mlx_ram_pct)}%` : '—'} sub={system?.mlx_ram_gb ? `${system.mlx_ram_gb} GB` : undefined} />
+          <StatPill label="CPU Load"      value={system?.cpu_pct != null ? `${Math.round(system.cpu_pct)}%` : '—'} sub={system?.load_1m ? `${system.load_1m} avg` : undefined} />
+          <StatPill label="Disk"          value={system?.disk_pct != null ? `${Math.round(system.disk_pct)}%` : '—'} sub={system ? `${system.disk_used_gb}/${system.disk_total_gb} GB` : undefined} warn={system?.disk_pct != null && system.disk_pct > 85} />
+          <StatPill label="Mesh Online"   value={`${onlineAgents}/${agents.length || '—'}`} sub={system?.uptime_seconds ? `UP ${formatUptime(system.uptime_seconds)}` : undefined} />
+          <TimelineScrubber />
+        </div>
+
       </div>
     </div>
   )

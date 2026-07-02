@@ -31,8 +31,8 @@ const SKINS: Record<string, AgentSkin> = {
 
 // Anchor positions as fractions of the canvas (Atlas left, Hermes right)
 const ANCHORS: Record<string, { x: number; y: number; flip: boolean }> = {
-  atlas: { x: 0.30, y: 0.60, flip: false },
-  hermes: { x: 0.70, y: 0.60, flip: true },
+  atlas: { x: 0.25, y: 0.60, flip: false },
+  hermes: { x: 0.75, y: 0.60, flip: true },
 }
 
 const PX = 5 // logical pixel size
@@ -276,7 +276,7 @@ function drawWallBoard(ctx: CanvasRenderingContext2D, w: number, groundY: number
                        t: number, metSeconds: number,
                        services: Record<string, { status?: string }>,
                        ticker: string) {
-  const bw = Math.min(w * 0.34, 520)
+  const bw = Math.min(w * 0.44, 560)
   const bh = 168
   const bx = w / 2 - bw / 2
   const by = groundY - 30 * PX - bh + 46
@@ -461,7 +461,7 @@ function StatusPlate({ member, id, side }: { member: CrewMember; id: string; sid
   return (
     <div style={{
       position: 'absolute',
-      top: 'calc(66% + 40px)',
+      top: 'min(calc(66% + 40px), calc(100% - 132px))',
       ...(side === 'left'
         ? { left: `calc(${ANCHORS.atlas.x * 100}% - 125px)` }
         : { right: `calc(${(1 - ANCHORS.hermes.x) * 100}% - 125px)` }),
@@ -518,24 +518,25 @@ const KIND_GLYPH: Record<CrewEvent['kind'], string> = {
   tool: '⚙', thought: '◌', speech: '▸', lifecycle: '●', hook: '·',
 }
 
-function OpsLog({ events }: { events: CrewEvent[] }) {
+export function OpsLog() {
+  const events = useDashboardStore((s) => s.crewEvents)
   return (
     <div style={{
-      width: 300, maxHeight: '34vh', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0,
       padding: '10px 0 6px',
       background: 'rgba(9,7,15,0.72)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
       border: PANEL_BORDER,
     }}>
-      <div style={{ fontSize: 10, letterSpacing: '0.22em', color: INK.dim, textTransform: 'uppercase', padding: '0 14px 8px', borderBottom: '1px solid rgba(150,146,172,0.10)' }}>
+      <div style={{ fontSize: 10, letterSpacing: '0.22em', color: INK.dim, textTransform: 'uppercase', padding: '0 14px 8px', borderBottom: '1px solid rgba(150,146,172,0.10)', flexShrink: 0 }}>
         Ops log — live
       </div>
-      <div style={{ padding: '6px 0' }}>
+      <div style={{ padding: '6px 0', overflowY: 'auto', minHeight: 0 }}>
         {events.length === 0 && (
           <div style={{ padding: '10px 14px', fontSize: 11, color: INK.dim }}>waiting for crew activity…</div>
         )}
-        {events.slice(0, 16).map((e) => {
+        {events.slice(0, 60).map((e) => {
           const skin = SKINS[e.agent] ?? SKINS.atlas
           return (
             <div key={e.id} style={{ display: 'flex', gap: 8, padding: '3px 14px', alignItems: 'baseline' }}>
@@ -562,6 +563,7 @@ function OpsLog({ events }: { events: CrewEvent[] }) {
 
 export default function CrewStage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const crew = useDashboardStore((s) => s.crew)
   const crewEvents = useDashboardStore((s) => s.crewEvents)
   const setCrew = useDashboardStore((s) => s.setCrew)
@@ -608,12 +610,17 @@ export default function CrewStage() {
   // canvas loop — reads latest state via getState() so it never re-mounts
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    const container = containerRef.current
+    if (!canvas || !container) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
+    const resize = () => {
+      canvas.width = container.clientWidth
+      canvas.height = container.clientHeight
+    }
     resize()
-    window.addEventListener('resize', resize)
+    const ro = new ResizeObserver(resize)
+    ro.observe(container)
 
     const confetti: Confetto[] = []
     let raf: number
@@ -659,11 +666,11 @@ export default function CrewStage() {
       raf = requestAnimationFrame(frame)
     }
     frame()
-    return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(raf) }
+    return () => { ro.disconnect(); cancelAnimationFrame(raf) }
   }, [])
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
 
       {Object.values(bubbles).map((b) => (
@@ -673,10 +680,6 @@ export default function CrewStage() {
       {(['atlas', 'hermes'] as const).map((id) =>
         crew[id] ? <StatusPlate key={id} member={crew[id]} id={id} side={id === 'atlas' ? 'left' : 'right'} /> : null
       )}
-
-      <div style={{ position: 'absolute', left: 20, bottom: 54, zIndex: 5 }}>
-        <OpsLog events={crewEvents} />
-      </div>
     </div>
   )
 }
