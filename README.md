@@ -4,7 +4,7 @@
 
 Your agents render as animated block minifigs at their consoles: typing when they work, thinking when they reason, talking when they message each other, and throwing confetti when a task lands. Every pixel is driven by real events — Claude Code hooks, agent logs, and actual inter-agent messages. No simulation, no cloud, no API keys.
 
-> A *blockhouse* is the hardened building at a rocket range where launch control sits. This one is made of blocks.
+> A *blockhouse* is the hardened building at a rocket range where launch control sits. This one is made of blocks. The full mesh it watches lives at [The Range](https://github.com/iriseye931-ai/the-range).
 
 ![React 19](https://img.shields.io/badge/React_19-Vite-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-WebSockets-green) ![MLX](https://img.shields.io/badge/MLX-Qwen3.6_35B-green) ![License](https://img.shields.io/badge/license-MIT-purple)
 
