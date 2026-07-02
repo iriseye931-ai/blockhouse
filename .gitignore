@@ -23,3 +23,6 @@ logs/
 .coverage
 htmlcov/
 .worktrees/
+
+# Dev planning notes (local only)
+docs_dev/

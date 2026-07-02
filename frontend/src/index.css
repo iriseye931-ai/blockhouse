@@ -129,3 +129,13 @@ details[open] {
 ::-webkit-scrollbar-thumb:hover {
   background: #5a3080;
 }
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes led-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}

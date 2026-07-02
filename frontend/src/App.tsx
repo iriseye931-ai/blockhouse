@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback, type CSSProperties } from 're
 import { useWebSocket } from './hooks/useWebSocket'
 import { useDashboardStore } from './store/dashboardStore'
 import type { GraphSelection, SignalWatcherState, ServiceHealth } from './types'
-import MeshGraph from './components/MeshGraph'
+import CrewStage from './components/CrewStage'
+import AgentInbox from './components/AgentInbox'
 
 // ── Color palette ─────────────────────────────────────────────────────────────
 
@@ -426,7 +427,7 @@ export default function App() {
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
 
         <VolumetricFog />
-        <MeshGraph selected={graphSelection} onSelectionChange={setGraphSelection} />
+        <CrewStage />
         <FloatingParticles />
 
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 4 }}>
@@ -447,6 +448,11 @@ export default function App() {
             <div style={{ pointerEvents: 'all' }}>
               <ClockDot isConnected={isConnected} />
             </div>
+          </div>
+
+          {/* Right rail — agent inbox */}
+          <div style={{ position: 'absolute', top: 64, right: 20, pointerEvents: 'all' }}>
+            <AgentInbox />
           </div>
 
           {/* Bottom strip — hover to reveal */}

@@ -10,18 +10,18 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-# Add backend root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add repo root to path so the `backend` package resolves
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from main import (
-    app,
-    AmpSendRequest,
-    HermesBackgroundTaskRequest,
-    PermissionAuditRequest,
-    RouteTaskRequest,
-    TaskSubmitRequest,
-    _RAG_MAX_FILE_BYTES,
-    _RAG_ALLOWED_EXT,
+from backend.main import app
+from backend.routers.hermes import AmpSendRequest, HermesBackgroundTaskRequest
+from backend.routers.permissions import PermissionAuditRequest
+from backend.routers.routing import RouteTaskRequest, TaskSubmitRequest
+from backend.config import (
+    RAG_MAX_FILE_BYTES as _RAG_MAX_FILE_BYTES,
+    RAG_ALLOWED_EXT as _RAG_ALLOWED_EXT,
+)
+from backend.helpers import (
     _build_hermes_background_command,
     _cleanup_hermes_worktree,
     _finalize_agents,
@@ -268,7 +268,7 @@ class TestRoutingValidation:
         assert rec["recommended_profile_display"] == "default"
 
     def test_routing_summary_exposes_hermes_profile_guidance(self):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         summary = main_mod._build_routing_summary(
             [
@@ -304,7 +304,7 @@ class TestTaskSubmitEndpoint:
         assert data["recommended_profile"] in {"workhorse", "sidecar"}
 
     def test_submit_task_premium_can_defer_when_unavailable(self, monkeypatch):
-        import main as main_mod
+        import backend.helpers as main_mod
         monkeypatch.setitem(main_mod._state, "routing_summary", {
             "policy": "local-first",
             "premium_available": [],
@@ -375,7 +375,7 @@ class TestHermesSessions:
         assert overview["resume_target"] == "sidecar digest"
 
     def test_sessions_overview_aggregates_profiles(self, tmp_path, monkeypatch):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         hermes_home = tmp_path / ".hermes"
         profiles_dir = hermes_home / "profiles"
@@ -422,7 +422,7 @@ class TestHermesSessions:
         assert overview["search_ready"] is True
 
     def test_checkpoint_overview_reads_profile_settings(self, tmp_path, monkeypatch):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         hermes_home = tmp_path / ".hermes"
         profile_home = hermes_home / "profiles" / "mesh-sidecar"
@@ -447,7 +447,7 @@ class TestHermesSessions:
         assert "/rollback diff" in overview["rollback_diff_hint"]
 
     def test_checkpoint_overview_handles_disabled_checkpoints(self, tmp_path, monkeypatch):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         hermes_home = tmp_path / ".hermes"
         profile_home = hermes_home
@@ -590,7 +590,7 @@ class TestHermesSessions:
         assert overview["external_provider_endpoint"] == "http://127.0.0.1:2033/mcp"
 
     def test_background_log_endpoint_returns_tail(self, tmp_path, monkeypatch):
-        import main as main_mod
+        import backend.routers.hermes as main_mod
 
         log_path = tmp_path / "task.log"
         log_path.write_text("line 1\nline 2\nline 3\n")
@@ -605,7 +605,7 @@ class TestHermesSessions:
         assert response.json()["log"] == "line 2\nline 3"
 
     def test_background_poll_endpoint_returns_task(self, monkeypatch):
-        import main as main_mod
+        import backend.routers.hermes as main_mod
 
         monkeypatch.setattr(
             main_mod,
@@ -656,7 +656,7 @@ class TestHermesBackgroundTasks:
         assert commands == [{"name": "status", "type": "exec", "command": "echo ok"}]
 
     def test_cleanup_worktree_removes_path(self, tmp_path, monkeypatch):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         worktree_path = tmp_path / "repo" / ".worktrees" / "hermes-1234"
         worktree_path.mkdir(parents=True)
@@ -684,7 +684,7 @@ class TestHermesBackgroundTasks:
         assert task["status"] == "cleaned"
 
     def test_cleanup_worktree_is_idempotent_when_already_removed(self, tmp_path, monkeypatch):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         worktree_path = tmp_path / "repo" / ".worktrees" / "hermes-1234"
         registry_path = tmp_path / "tasks.json"
@@ -713,7 +713,7 @@ class TestHermesBackgroundTasks:
 
 class TestAvailabilityEndpoint:
     def test_set_availability_override(self, tmp_path, monkeypatch):
-        import main as main_mod
+        import backend.helpers as main_mod
         monkeypatch.setattr(main_mod, "AVAILABILITY_OVERRIDES_PATH", tmp_path / "availability.json")
         monkeypatch.setattr(main_mod, "PERMISSION_AUDIT_LOG_PATH", tmp_path / "permission_audit.jsonl")
         monkeypatch.setitem(main_mod._state, "permission_audit_summary", {})
@@ -772,7 +772,7 @@ class TestPermissionAudit:
             PermissionAuditRequest(source="codex", decision="approve", mode="default")
 
     def test_permission_audit_round_trip(self, tmp_path, monkeypatch):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         monkeypatch.setattr(main_mod, "PERMISSION_AUDIT_LOG_PATH", tmp_path / "permission_audit.jsonl")
         monkeypatch.setitem(main_mod._state, "permission_audit_summary", {})
@@ -802,7 +802,7 @@ class TestPermissionAudit:
 
 class TestLocalProfileActions:
     def test_start_profile_requires_installed_model(self, monkeypatch, tmp_path):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         monkeypatch.setattr(main_mod, "PERMISSION_AUDIT_LOG_PATH", tmp_path / "permission_audit.jsonl")
         monkeypatch.setitem(main_mod._state, "permission_audit_summary", {})
@@ -834,7 +834,7 @@ class TestLocalProfileActions:
         assert audit["entries"][-1]["decision"] == "deny"
 
     def test_stop_profile_without_pid_is_ok(self, monkeypatch):
-        import main as main_mod
+        import backend.helpers as main_mod
         monkeypatch.setitem(main_mod._state, "agents", [
             {
                 "name": "hermes",
@@ -860,7 +860,7 @@ class TestLocalProfileActions:
         assert r.json()["status"] in {"not_running", "stopped"}
 
     def test_finalize_agents_adds_hermes_native_default_profile(self, monkeypatch, tmp_path):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         hermes_home = tmp_path / ".hermes"
         hermes_home.mkdir(parents=True)
@@ -893,7 +893,7 @@ class TestLocalProfileActions:
         assert native["base_url"] == "http://127.0.0.1:8081/v1"
 
     def test_start_hermes_native_profile_runs_gateway(self, monkeypatch, tmp_path):
-        import main as main_mod
+        import backend.helpers as main_mod
 
         hermes_home = tmp_path / ".hermes"
         profile_home = hermes_home / "profiles" / "coder"

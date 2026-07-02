@@ -473,3 +473,38 @@ export interface StatusUpdate {
   signal_watcher?: SignalWatcherState
   security_posture?: SecurityPosture
 }
+
+// ── Crew (real-time agent activity) ──────────────────────────────────────────
+
+export type CrewStatus = 'idle' | 'thinking' | 'working' | 'talking' | 'waiting'
+
+export interface CrewMember {
+  name: string
+  role: string
+  model: string
+  status: CrewStatus
+  activity: string | null
+  tool: string | null
+  task: string | null
+  tokens_in: number
+  tokens_out: number
+  events_today: number
+  last_event_at: string | null
+}
+
+export interface CrewEvent {
+  id: string
+  ts: string
+  agent: string
+  kind: 'hook' | 'tool' | 'thought' | 'speech' | 'lifecycle'
+  text: string
+  tool: string | null
+  meta: { from?: string; to?: string; subject?: string }
+}
+
+export interface CrewEventMessage {
+  type: 'crew_event'
+  timestamp: string
+  event: CrewEvent | null
+  crew: Record<string, CrewMember>
+}

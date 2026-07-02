@@ -1378,17 +1378,33 @@ async def _fetch_service_health(client: httpx.AsyncClient) -> dict[str, Any]:
         pid = runtime.get("pid")
         gateway_state = runtime.get("gateway_state")
         platform_states = runtime.get("platforms", {})
+
+        def _fresh(pdata: dict) -> bool:
+            # platform records can outlive their platform config — ignore stale ones
+            raw = str(pdata.get("updated_at") or "")
+            try:
+                age = datetime.now(timezone.utc) - datetime.fromisoformat(raw)
+                return age.total_seconds() < 48 * 3600
+            except ValueError:
+                return False
+
         active_platforms = sorted(
             name for name, pdata in platform_states.items()
-            if isinstance(pdata, dict) and pdata.get("state") not in ("disconnected", "stopped")
+            if isinstance(pdata, dict) and _fresh(pdata)
+            and pdata.get("state") not in ("disconnected", "stopped")
+        )
+        failing = sorted(
+            name for name, pdata in platform_states.items()
+            if isinstance(pdata, dict) and _fresh(pdata)
+            and pdata.get("state") in ("retrying", "error", "failed")
         )
         if _pid_is_alive(pid) or gateway_state == "running":
             services["hermes_gateway"] = {
                 "name": "Hermes Gateway",
                 "url": HERMES_GATEWAY_URL,
-                # Cron-only Hermes runs without an HTTP health endpoint.
-                "status": "degraded",
-                "error": str(exc),
+                # No HTTP health endpoint in this mode — judge from runtime state.
+                "status": "degraded" if failing else "up",
+                **({"error": f"platform(s) failing: {', '.join(failing)}"} if failing else {}),
                 "detail": {
                     "runtime_state": gateway_state or "running",
                     "pid": pid,
@@ -1497,7 +1513,7 @@ MESH_AGENTS = [
         "scarce": True,
         "default_for": [],
         "reserve_for": ["planning", "ambiguous debugging", "tricky refactors", "final review"],
-        "fallback_to": "claude",
+        "fallback_to": "hermes",
         "detect": None,  # always online — we are Atlas
     },
     {
@@ -1531,36 +1547,6 @@ MESH_AGENTS = [
         ],
         "detect": "hermes",  # pgrep pattern
     },
-    {
-        "id": "iriseye",
-        "name": "iriseye",
-        "label": "iriseye",
-        "role": "File/Web Agent",
-        "model": "Claude Code",
-        "color": "#10b981",
-        "tier": "specialized",
-        "routing_group": "specialized",
-        "scarce": False,
-        "default_for": ["file work", "web tasks"],
-        "reserve_for": ["interactive file and browser tasks"],
-        "fallback_to": "hermes",
-        "detect": None,
-    },
-    {
-        "id": "claude",
-        "name": "claude",
-        "label": "claude",
-        "role": "Lead Role Backup",
-        "model": "Claude Code",
-        "color": "#f59e0b",
-        "tier": "premium",
-        "routing_group": "premium-pool",
-        "scarce": True,
-        "default_for": [],
-        "reserve_for": ["planning", "ambiguous debugging", "tricky refactors", "final review"],
-        "fallback_to": "atlas",
-        "detect": None,
-    },
 ]
 
 
@@ -1584,7 +1570,7 @@ async def _fetch_agents(client: httpx.AsyncClient) -> list[dict[str, Any]]:
     for key, defn in defs_by_name.items():
         if key == "atlas":
             runtime_status = "online"
-            task = "Atlas lead role — Claude Code (Sonnet)"
+            task = "Atlas lead role — Claude Code (Fable 5)"
         elif defn["detect"] and await _is_process_running(defn["detect"]):
             runtime_status = "online"
             task = None
@@ -1662,6 +1648,10 @@ def _finalize_agents(
             presence_kind = "local-runtime"
             presence_status = "online"
             presence_reason = "Local runtime detected"
+        elif str(agent.get("registration_status", "")) == "registered":
+            presence_kind = "external-registration"
+            presence_status = "registered"
+            presence_reason = "Registered in the mesh; no local runtime detected"
         else:
             presence_kind = "local-runtime"
             presence_status = "offline"

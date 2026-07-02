@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useDashboardStore } from '../store/dashboardStore'
-import { StatusUpdate, MeshInsight } from '../types'
+import { StatusUpdate, MeshInsight, CrewEventMessage } from '../types'
 
 const WS_URL = '/ws'
 
@@ -39,6 +39,14 @@ export const useWebSocket = () => {
 
         if (msg.type === 'insight') {
           addInsight(msg.insight as MeshInsight)
+          return
+        }
+
+        if (msg.type === 'crew_event') {
+          const ce = msg as CrewEventMessage
+          const { setCrew, addCrewEvent } = useDashboardStore.getState()
+          if (ce.crew) setCrew(ce.crew)
+          if (ce.event) addCrewEvent(ce.event)
           return
         }
 

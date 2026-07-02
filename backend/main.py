@@ -23,7 +23,7 @@ from .helpers import _refresh_agent_messages, _seconds_until
 # Routers
 from .routers import (
     agents, memory, hermes, system, cron,
-    routing, sessions, insights, permissions, rag, chat,
+    routing, sessions, insights, permissions, rag, chat, crew,
 )
 
 # ---------------------------------------------------------------------------
@@ -75,6 +75,9 @@ async def _lifespan(app: FastAPI):
     asyncio.create_task(run_openviking_watchdog())
     asyncio.create_task(run_generate_brief_on_startup())
     asyncio.create_task(_snapshot_loop())
+    asyncio.create_task(crew.run_hermes_feed())
+    asyncio.create_task(crew.run_amp_watch())
+    asyncio.create_task(crew.run_crew_idle_decay())
     print(f"[startup] Mission Control backend on :8000 — polling every {POLL_INTERVAL}s", flush=True)
     yield
 
@@ -98,7 +101,7 @@ app.add_middleware(
 # Register routers
 # ---------------------------------------------------------------------------
 
-for router_module in (agents, memory, hermes, system, cron, routing, sessions, insights, permissions, rag, chat):
+for router_module in (agents, memory, hermes, system, cron, routing, sessions, insights, permissions, rag, chat, crew):
     app.include_router(router_module.router)
 
 # ---------------------------------------------------------------------------

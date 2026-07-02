@@ -5,6 +5,7 @@ Real-time dashboard for multi-agent AI systems — built for the **Claude Code +
 ![Dashboard](https://img.shields.io/badge/React_19-Vite-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-WebSockets-green) ![MLX](https://img.shields.io/badge/MLX-Qwen3.5_35B-green) ![License](https://img.shields.io/badge/license-MIT-purple)
 
 ![Mission Control Dashboard](assets/dashboard-full.png)
+*(capture from v0.2 — v0.3 replaces the mesh sphere with the pixel crew stage)*
 
 ---
 
@@ -28,8 +29,10 @@ Real-time dashboard for multi-agent AI systems — built for the **Claude Code +
 
 Most local AI setups are invisible. Agents run in separate terminals, routing decisions disappear into logs, memory health is hard to interpret, and operator state gets scattered across tools. This dashboard pulls that into one live surface.
 
-- **Permanent agent dock** — Lead, Hermes, and IrisEye stay pinned with status, model, presence, runtime, and current task
-- **Cinematic mesh sphere** — animated agent/service topology with active-node motion, routing emphasis, and memory-aware link states
+- **Pixel crew stage** — Atlas and Hermes as animated pixel characters at their consoles: typing when working, thought dots when reasoning, speech bubbles when they message each other over AMP
+- **Real event pipeline, no simulation** — Atlas activity streams from Claude Code's Hooks API, Hermes from its agent log tail, and inter-agent speech from real AMP messages
+- **Status plates** — per-agent status, model, current task, live activity line, and token counters
+- **Ops log** — a scrolling live feed of every tool call, thought, and handoff as it happens
 - **Ops strip + alerts** — live service health, memory mode, route target, and highest-priority operator alert at a glance
 - **Operator utility block** — cron, audit, queue, and memory alert counts without leaving the main view
 - **System panel** — CPU, RAM, MLX, and local-use telemetry in the canvas HUD
@@ -43,11 +46,11 @@ Most local AI setups are invisible. Agents run in separate terminals, routing de
 
 Premium dark-mode terminal aesthetic with a mesh-first operator layout. No cloud dependency, no tab hunting, no fake glassmorphism.
 
-- **Mesh-first composition** — the sphere is the product center, not a decorative background
+- **Crew-first composition** — the agents are the product center, not a decorative background
 - **Permanent operator dock** — agent state stays visible instead of hiding behind modal panels or tabs
 - **Responsive HUD clearance** — the sphere respects the top operator stack and side dock instead of overlapping them
 - **Unified accent language** — warm gold, cyan, violet, amber, and red are used consistently for identity and state
-- **State-aware motion** — node glow, reticles, and memory-path coloring respond to live routing and degradation causes
+- **State-aware motion** — character animation, console glow, and data beams respond to real agent state within ~2s
 
 ---
 

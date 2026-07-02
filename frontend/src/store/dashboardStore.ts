@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Agent, ServiceHealth, ServiceHistoryPoint, CronJob, MemoryEntry, MemorySummary, MemoryEvent, Message, SystemMetrics, AmpMessage, HermesStatus, MeshLogs, TrendingRepo, MeshInsight, RoutingSummary, PermissionAuditSummary, AgentMessage, SignalWatcherState, SecurityPosture } from '../types'
+import { Agent, ServiceHealth, ServiceHistoryPoint, CronJob, MemoryEntry, MemorySummary, MemoryEvent, Message, SystemMetrics, AmpMessage, HermesStatus, MeshLogs, TrendingRepo, MeshInsight, RoutingSummary, PermissionAuditSummary, AgentMessage, SignalWatcherState, SecurityPosture, CrewMember, CrewEvent } from '../types'
 
 interface DashboardState {
   // Connection
@@ -47,6 +47,10 @@ interface DashboardState {
   signalWatcher: SignalWatcherState | null
   securityPosture: SecurityPosture | null
 
+  // Crew (real-time agent activity)
+  crew: Record<string, CrewMember>
+  crewEvents: CrewEvent[]
+
   // Actions
   setAgents: (agents: Agent[]) => void
   setServices: (services: Record<string, ServiceHealth>) => void
@@ -77,6 +81,9 @@ interface DashboardState {
   setInsights: (insights: MeshInsight[]) => void
   setSignalWatcher: (state: SignalWatcherState | null) => void
   setSecurityPosture: (posture: SecurityPosture | null) => void
+  setCrew: (crew: Record<string, CrewMember>) => void
+  addCrewEvent: (event: CrewEvent) => void
+  setCrewEvents: (events: CrewEvent[]) => void
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
@@ -113,6 +120,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   signalWatcher: null,
   securityPosture: null,
+
+  crew: {},
+  crewEvents: [],
 
   setAgents: (agents) => set({ agents }),
   setServices: (services) => set({ services }),
@@ -155,4 +165,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   setInsights: (insights) => set({ insights }),
   setSignalWatcher: (signalWatcher) => set({ signalWatcher }),
   setSecurityPosture: (securityPosture) => set({ securityPosture }),
+  setCrew: (crew) => set({ crew }),
+  addCrewEvent: (event) =>
+    set((state) => ({ crewEvents: [event, ...state.crewEvents].slice(0, 200) })),
+  setCrewEvents: (crewEvents) => set({ crewEvents: crewEvents.slice(0, 200) }),
 }))
