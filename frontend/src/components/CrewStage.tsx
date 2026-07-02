@@ -105,7 +105,7 @@ function stepConfetti(ctx: CanvasRenderingContext2D, pool: Confetto[], groundY: 
  */
 function drawMinifig(ctx: CanvasRenderingContext2D, cx: number, groundY: number,
                      skin: AgentSkin, status: CrewStatus, t: number, flip: boolean,
-                     celebrating: boolean) {
+                     celebrating: boolean, waving = false) {
   const working = status === 'working'
   const bobSpeed = celebrating ? 10 : working ? 7 : status === 'thinking' ? 3 : 1.6
   const bobAmp = celebrating ? 4 : working ? 1.2 : 1.6
@@ -173,6 +173,14 @@ function drawMinifig(ctx: CanvasRenderingContext2D, cx: number, groundY: number,
       rect(s * 5.0 + (s < 0 ? -1.8 : 0), 20.6, 1.8, 3.2, skin.accentShade)
       claw(s * 5.9, 21.4)
     }
+  } else if (waving) {
+    // near arm waves hello; far arm hangs
+    const wig = Math.sin(t * 12) * 1.1
+    rect(2.7, 17.4, 1.8, 2.8, skin.accentShade)
+    rect(3.4 + wig, 20.6, 1.8, 3.4, skin.accentShade)
+    claw(4.3 + wig, 21.3)
+    rect(-4.5, 15.0, 1.8, 5.4, skin.accentShade)
+    claw(-3.6, 8.6)
   } else if (working) {
     // near arm (desk side, +x) types with a little bounce; far arm hangs
     const dip = phase > 0 ? 0.4 : 0
@@ -271,15 +279,23 @@ function drawBaseplate(ctx: CanvasRenderingContext2D, w: number, h: number, grou
   }
 }
 
+/** Board geometry shared by the renderer and the click handler. */
+function boardGeometry(w: number, groundY: number) {
+  const bw = Math.min(w * 0.44, 560)
+  const bh = 168
+  const bx = w / 2 - bw / 2
+  const by = groundY - 30 * PX - bh + 46
+  const cols = 4
+  const cellW = (bw - 32) / cols
+  return { bw, bh, bx, by, cols, cellW }
+}
+
 /** The Big Board — NASA-style front screen with MET clock, ticker, GO/NO-GO. */
 function drawWallBoard(ctx: CanvasRenderingContext2D, w: number, groundY: number,
                        t: number, metSeconds: number,
                        services: Record<string, { status?: string }>,
                        ticker: string) {
-  const bw = Math.min(w * 0.44, 560)
-  const bh = 168
-  const bx = w / 2 - bw / 2
-  const by = groundY - 30 * PX - bh + 46
+  const { bw, bh, bx, by, cols, cellW } = boardGeometry(w, groundY)
 
   // frame
   ctx.fillStyle = 'rgba(16,14,26,0.92)'
@@ -324,8 +340,6 @@ function drawWallBoard(ctx: CanvasRenderingContext2D, w: number, groundY: number
   ctx.fill()
 
   // GO / NO-GO board
-  const cols = 4
-  const cellW = (bw - 32) / cols
   CALLSIGNS.forEach(([key, callsign], i) => {
     const col = i % cols, row = Math.floor(i / cols)
     const gx = bx + 16 + col * cellW
@@ -518,8 +532,15 @@ const KIND_GLYPH: Record<CrewEvent['kind'], string> = {
   tool: '⚙', thought: '◌', speech: '▸', lifecycle: '●', hook: '·',
 }
 
+const OPS_FILTERS = ['all', 'atlas', 'hermes', 'speech'] as const
+
 export function OpsLog() {
-  const events = useDashboardStore((s) => s.crewEvents)
+  const allEvents = useDashboardStore((s) => s.crewEvents)
+  const filter = useDashboardStore((s) => s.opsFilter)
+  const setOpsFilter = useDashboardStore((s) => s.setOpsFilter)
+  const events = filter === 'all' ? allEvents
+    : filter === 'speech' ? allEvents.filter((e) => e.kind === 'speech')
+    : allEvents.filter((e) => e.agent === filter)
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0,
@@ -529,12 +550,34 @@ export function OpsLog() {
       WebkitBackdropFilter: 'blur(12px)',
       border: PANEL_BORDER,
     }}>
-      <div style={{ fontSize: 10, letterSpacing: '0.22em', color: INK.dim, textTransform: 'uppercase', padding: '0 14px 8px', borderBottom: '1px solid rgba(150,146,172,0.10)', flexShrink: 0 }}>
-        Ops log — live
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 14px 8px', borderBottom: '1px solid rgba(150,146,172,0.10)', flexShrink: 0 }}>
+        <span style={{ fontSize: 10, letterSpacing: '0.22em', color: INK.dim, textTransform: 'uppercase' }}>
+          Ops log — live
+        </span>
+        <span style={{ display: 'flex', gap: 4 }}>
+          {OPS_FILTERS.map((f) => (
+            <button
+              key={f}
+              onClick={() => setOpsFilter(f)}
+              style={{
+                background: 'none', padding: '1px 6px', cursor: 'pointer',
+                border: `1px solid ${filter === f ? 'rgba(150,146,172,0.4)' : 'transparent'}`,
+                color: filter === f
+                  ? (SKINS[f]?.accent ?? INK.text)
+                  : INK.dim,
+                fontSize: 8.5, letterSpacing: '0.12em', textTransform: 'uppercase',
+              }}
+            >
+              {f}
+            </button>
+          ))}
+        </span>
       </div>
       <div style={{ padding: '6px 0', overflowY: 'auto', minHeight: 0 }}>
         {events.length === 0 && (
-          <div style={{ padding: '10px 14px', fontSize: 11, color: INK.dim }}>waiting for crew activity…</div>
+          <div style={{ padding: '10px 14px', fontSize: 11, color: INK.dim }}>
+            {filter === 'all' ? 'waiting for crew activity…' : `no ${filter} events yet`}
+          </div>
         )}
         {events.slice(0, 60).map((e) => {
           const skin = SKINS[e.agent] ?? SKINS.atlas
@@ -569,8 +612,41 @@ export default function CrewStage() {
   const setCrew = useDashboardStore((s) => s.setCrew)
   const setCrewEvents = useDashboardStore((s) => s.setCrewEvents)
   const [bubbles, setBubbles] = useState<Record<string, Bubble>>({})
+  const [selectedService, setSelectedService] = useState<string | null>(null)
   const celebrateRef = useRef<Record<string, { until: number; spawned: boolean }>>({})
+  const waveRef = useRef<Record<string, number>>({})
   const mountedAtRef = useRef(Date.now())
+  const services = useDashboardStore((s) => s.services)
+  const setOpsFilter = useDashboardStore((s) => s.setOpsFilter)
+
+  // click routing: minifig -> wave + filter log; GO/NO-GO cell -> service detail
+  const handleStageClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const r = canvas.getBoundingClientRect()
+    const x = e.clientX - r.left, y = e.clientY - r.top
+    const w = canvas.width, groundY = canvas.height * 0.66
+
+    for (const id of ['atlas', 'hermes'] as const) {
+      const ax = w * ANCHORS[id].x
+      if (Math.abs(x - ax) < 60 && y > groundY - 24 * PX - 20 && y < groundY + 12) {
+        waveRef.current[id] = Date.now() + 1800
+        setOpsFilter(id)
+        return
+      }
+    }
+    const g = boardGeometry(w, groundY)
+    if (x >= g.bx && x <= g.bx + g.bw && y >= g.by + 54 && y <= g.by + 54 + 2 * 34 + 6) {
+      const col = Math.floor((x - (g.bx + 16)) / g.cellW)
+      const row = Math.floor((y - (g.by + 54)) / 34)
+      const idx = row * g.cols + col
+      if (idx >= 0 && idx < CALLSIGNS.length) {
+        setSelectedService((cur) => cur === CALLSIGNS[idx][0] ? null : CALLSIGNS[idx][0])
+        return
+      }
+    }
+    setSelectedService(null)
+  }
 
   // seed from REST so the stage is alive before the first WS frame
   useEffect(() => {
@@ -651,12 +727,13 @@ export default function CrewStage() {
         const cx = w * anchor.x
         const cel = celebrateRef.current[id]
         const celebrating = !!cel && cel.until > now
+        const waving = (waveRef.current[id] ?? 0) > now
         if (cel && celebrating && !cel.spawned) {
           spawnConfetti(confetti, cx, groundY)
           cel.spawned = true
         }
         drawConsole(ctx, cx, groundY, skin, status === 'working', t + (id === 'hermes' ? 1.7 : 0), anchor.flip)
-        drawMinifig(ctx, cx, groundY, skin, status, t + (id === 'hermes' ? 2.3 : 0), anchor.flip, celebrating)
+        drawMinifig(ctx, cx, groundY, skin, status, t + (id === 'hermes' ? 2.3 : 0), anchor.flip, celebrating, waving)
         if (!celebrating && status === 'thinking') drawThoughtDots(ctx, cx, groundY, t, skin.accent)
         if (!celebrating && status === 'waiting') drawWaitingMark(ctx, cx, groundY, t)
         if (status === 'talking') drawLinkBeam(ctx, w, groundY, t, id)
@@ -669,9 +746,12 @@ export default function CrewStage() {
     return () => { ro.disconnect(); cancelAnimationFrame(raf) }
   }, [])
 
+  const svcDetail = selectedService ? services[selectedService] : null
+  const svcCallsign = selectedService ? CALLSIGNS.find(([k]) => k === selectedService)?.[1] : null
+
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
-      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0 }} />
+      <canvas ref={canvasRef} onClick={handleStageClick} style={{ position: 'absolute', inset: 0, cursor: 'pointer' }} />
 
       {Object.values(bubbles).map((b) => (
         <SpeechBubble key={b.agent} bubble={b} side={b.agent === 'atlas' ? 'left' : 'right'} />
@@ -680,6 +760,87 @@ export default function CrewStage() {
       {(['atlas', 'hermes'] as const).map((id) =>
         crew[id] ? <StatusPlate key={id} member={crew[id]} id={id} side={id === 'atlas' ? 'left' : 'right'} /> : null
       )}
+
+      {/* Service detail popover — opens from a GO/NO-GO cell */}
+      {svcDetail && (
+        <div style={{
+          position: 'absolute', top: 24, left: '50%', transform: 'translateX(-50%)',
+          width: 320, padding: '10px 14px 12px', zIndex: 7,
+          background: 'rgba(11,8,18,0.94)', border: PANEL_BORDER,
+          borderTop: `2px solid ${svcDetail.status === 'up' ? '#79ff98' : svcDetail.status === 'degraded' ? '#f0c040' : '#ff7060'}`,
+          boxShadow: '0 16px 32px -16px rgba(0,0,0,0.6)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 12, letterSpacing: '0.16em', color: INK.text, fontWeight: 700 }}>
+              {svcCallsign} <span style={{ color: INK.dim, fontWeight: 400 }}>· {svcDetail.name ?? selectedService}</span>
+            </span>
+            <button onClick={() => setSelectedService(null)} style={{ background: 'none', border: 'none', color: INK.dim, cursor: 'pointer', fontSize: 12 }}>✕</button>
+          </div>
+          <div style={{ marginTop: 6, fontSize: 11, fontFamily: '"Fira Code", monospace', color: svcDetail.status === 'up' ? '#79ff98' : svcDetail.status === 'degraded' ? '#f0c040' : '#ff7060' }}>
+            {String(svcDetail.status ?? 'unknown').toUpperCase()}
+          </div>
+          {svcDetail.url && <div style={{ marginTop: 4, fontSize: 10, color: INK.soft, fontFamily: '"Fira Code", monospace' }}>{svcDetail.url}</div>}
+          {svcDetail.error && <div style={{ marginTop: 4, fontSize: 10, color: '#ff9d90', fontFamily: '"Fira Code", monospace' }}>{svcDetail.error}</div>}
+        </div>
+      )}
+
+      <CapcomConsole />
+    </div>
+  )
+}
+
+// ── CAPCOM — talk to the crew from mission control ────────────────────────────
+
+function CapcomConsole() {
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+
+  const send = async () => {
+    const message = text.trim()
+    if (!message || sending) return
+    setSending(true)
+    try {
+      await fetch('/api/amp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient: 'hermes', subject: 'capcom', message, type: 'notification' }),
+      })
+      setText('')
+    } catch { /* backend down — keep text so nothing is lost */ }
+    setSending(false)
+  }
+
+  return (
+    <div style={{
+      position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
+      display: 'flex', alignItems: 'center', gap: 8,
+      width: 'min(480px, 80%)', padding: '7px 10px', zIndex: 6,
+      background: 'rgba(11,8,18,0.85)', border: PANEL_BORDER,
+      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+    }}>
+      <span style={{ fontSize: 9, letterSpacing: '0.2em', color: INK.dim, flexShrink: 0 }}>CAPCOM ▸</span>
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') send() }}
+        placeholder="message hermes over AMP…"
+        style={{
+          flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
+          color: INK.text, fontSize: 12, fontFamily: '"Fira Code", monospace',
+        }}
+      />
+      <button
+        onClick={send}
+        disabled={sending || !text.trim()}
+        style={{
+          background: 'none', border: `1px solid ${SKINS.hermes.accent}`, color: SKINS.hermes.accent,
+          fontSize: 10, letterSpacing: '0.14em', padding: '3px 10px',
+          cursor: sending || !text.trim() ? 'default' : 'pointer',
+          opacity: sending || !text.trim() ? 0.4 : 1,
+        }}
+      >
+        {sending ? '…' : 'SEND'}
+      </button>
     </div>
   )
 }

@@ -32,7 +32,9 @@ Most local AI setups are invisible. Agents run in separate terminals, routing de
 - **Pixel crew stage** — Atlas and Hermes as animated pixel characters at their consoles: typing when working, thought dots when reasoning, speech bubbles when they message each other over AMP
 - **Real event pipeline, no simulation** — Atlas activity streams from Claude Code's Hooks API, Hermes from its agent log tail, and inter-agent speech from real AMP messages
 - **Status plates** — per-agent status, model, current task, live activity line, and token counters
-- **Ops log** — a scrolling live feed of every tool call, thought, and handoff as it happens
+- **Ops log** — a scrolling live feed of every tool call, thought, and handoff as it happens, with per-agent filter chips
+- **CAPCOM console** — type a message on the stage and it goes to Hermes over AMP; his reply appears as a speech bubble
+- **Clickable everything** — minifigs wave and filter the log; GO/NO-GO cells open live service detail
 - **Ops strip + alerts** — live service health, memory mode, route target, and highest-priority operator alert at a glance
 - **Operator utility block** — cron, audit, queue, and memory alert counts without leaving the main view
 - **System panel** — CPU, RAM, MLX, and local-use telemetry in the canvas HUD

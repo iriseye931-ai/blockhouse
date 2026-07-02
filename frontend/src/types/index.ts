@@ -170,6 +170,7 @@ export interface Agent {
 export interface ServiceHealth {
   name: string
   status: string  // "up" | "down" | "degraded"
+  url?: string
   error?: string
   detail?: unknown
   models?: string[]

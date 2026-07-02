@@ -50,6 +50,7 @@ interface DashboardState {
   // Crew (real-time agent activity)
   crew: Record<string, CrewMember>
   crewEvents: CrewEvent[]
+  opsFilter: 'all' | 'atlas' | 'hermes' | 'speech'
 
   // Actions
   setAgents: (agents: Agent[]) => void
@@ -84,6 +85,7 @@ interface DashboardState {
   setCrew: (crew: Record<string, CrewMember>) => void
   addCrewEvent: (event: CrewEvent) => void
   setCrewEvents: (events: CrewEvent[]) => void
+  setOpsFilter: (filter: 'all' | 'atlas' | 'hermes' | 'speech') => void
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
@@ -123,6 +125,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   crew: {},
   crewEvents: [],
+  opsFilter: 'all' as const,
 
   setAgents: (agents) => set({ agents }),
   setServices: (services) => set({ services }),
@@ -169,4 +172,5 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   addCrewEvent: (event) =>
     set((state) => ({ crewEvents: [event, ...state.crewEvents].slice(0, 200) })),
   setCrewEvents: (crewEvents) => set({ crewEvents: crewEvents.slice(0, 200) }),
+  setOpsFilter: (opsFilter) => set({ opsFilter }),
 }))

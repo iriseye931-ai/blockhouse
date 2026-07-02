@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented here.
 
+## v0.5.0 - 2026-07-02
+
+### Useful + fun (interactive console)
+- CAPCOM console: send real AMP messages to Hermes from the stage; replies render as live speech bubbles
+- Click a minifig: they wave and the ops log filters to that agent
+- Click a GO/NO-GO cell: service detail popover (status, URL, error)
+- Ops log filter chips (all / atlas / hermes / speech)
+
 ## v0.4.0 - 2026-07-01
 
 ### LEGO mission control (fun pass)
