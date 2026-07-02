@@ -64,6 +64,51 @@ def _fetch_json(client: httpx.Client, url: str) -> dict[str, Any]:
     return resp.json()
 
 
+def _ov_secret() -> str:
+    import os
+    key = os.getenv("OV_API_KEY")
+    if key:
+        return key
+    try:
+        for line in open(Path.home() / ".openviking" / "secrets.env"):
+            if line.startswith("OV_API_KEY="):
+                return line.split("=", 1)[1].strip()
+    except OSError:
+        pass
+    return ""
+
+
+def _check_memory_write(client: httpx.Client) -> CheckResult:
+    """End-to-end write-path probe: create a session on OpenViking and confirm
+    it returns a real session id. This is exactly what memory_store does first,
+    and where a stale/rotated API key silently fails (result: null) while
+    /health and recall keep working."""
+    try:
+        r = client.post(
+            "http://127.0.0.1:1933/api/v1/sessions",
+            headers={
+                "Authorization": f"Bearer {_ov_secret()}",
+                "X-OpenViking-Account": "teamirs",
+                "X-OpenViking-User": "iris",
+                "Content-Type": "application/json",
+            },
+            json={"metadata": {"probe": "mesh_doctor"}},
+            timeout=8.0,
+        )
+        body = r.json()
+        sid = (body.get("result") or {}).get("session_id")
+        if sid:
+            return CheckResult("memory-write", "ok", "OpenViking write path healthy (session created)")
+        return CheckResult(
+            "memory-write", "fail",
+            f"write path broken — session create returned no id "
+            f"({body.get('error', {}).get('code', r.status_code)}). "
+            f"Likely a stale key: rotate-ov-key.sh or restart-service.sh local.openviking-mcp",
+        )
+    except Exception as exc:
+        return CheckResult("memory-write", "fail", f"OpenViking write path unreachable: {exc}")
+
+
 def run_doctor(base_url: str, frontend_url: str, maestro_url: str) -> tuple[list[CheckResult], int]:
     results: list[CheckResult] = []
     exit_code = 0
@@ -90,13 +135,6 @@ def run_doctor(base_url: str, frontend_url: str, maestro_url: str) -> tuple[list
             results.append(CheckResult("frontend", "ok", f"Dashboard responding at {frontend_url}"))
         except Exception as exc:
             results.append(CheckResult("frontend", "warn", f"Dashboard not reachable: {exc}"))
-            exit_code = max(exit_code, 1)
-
-        maestro_service = services.get("aimaestro", {})
-        if maestro_service.get("status") == "up":
-            results.append(CheckResult("maestro", "ok", f"AI Maestro up ({maestro_service.get('agents', 0)} agents)"))
-        else:
-            results.append(CheckResult("maestro", "warn", f"AI Maestro degraded: {maestro_service.get('error', maestro_service.get('status', 'unknown'))}"))
             exit_code = max(exit_code, 1)
 
         hermes_service = services.get("hermes_gateway", {})
@@ -168,12 +206,10 @@ def run_doctor(base_url: str, frontend_url: str, maestro_url: str) -> tuple[list
             results.append(CheckResult("routing", "warn", f"Routine work is not routed to Hermes (got {routine_target})"))
             exit_code = max(exit_code, 1)
 
-        try:
-            maestro_agents = _fetch_json(client, f"{maestro_url}/api/agents")
-            results.append(CheckResult("maestro-api", "ok", f"AI Maestro API responding with {len(maestro_agents.get('agents', []))} agents"))
-        except Exception as exc:
-            results.append(CheckResult("maestro-api", "warn", f"AI Maestro API unreachable: {exc}"))
-            exit_code = max(exit_code, 1)
+        mem = _check_memory_write(client)
+        results.append(mem)
+        if mem.status == "fail":
+            exit_code = max(exit_code, 2)
 
     return results, exit_code
 
